@@ -42,30 +42,6 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 }
 
 void GThread::AtomicBegin() {
-  // Use a local variable to get the location in stack where we want to save
-  int tmp;
-  Gstm::cur_stack = &tmp;
-  INFO << "cur_stack = " << Gstm::cur_stack;
-  Gstm::cur_stack = Gstm::GetSP();
-  INFO << "cur_stack = " << Gstm::cur_stack;
-
-  Gstm::cur_stack_size = reinterpret_cast<uintptr_t>(Gstm::stack_top) -
-                         reinterpret_cast<uintptr_t>(Gstm::cur_stack);
-  BackupStack();
-
-  // Commit the context
-  // This code may return more than once:
-  //  1. The first time: a normal return
-  //  2. If the commit fails, we enter AtomicAbort(), and there will be a
-  //  longjmp function which will return again from here
-  if (setjmp(env_)) {
-    // Copy the stack back
-    memcpy(Gstm::cur_stack, Gstm::stack_backup, Gstm::cur_stack_size);
-    INFO << "TID=" << tid_ << ", Rolling back ...";
-  } else {
-    INFO << "setjmp";
-  }
-
   // Clear the local version mappings
   Gstm::read_set_version.clear();
   Gstm::write_set_version.clear();
@@ -78,8 +54,11 @@ void GThread::AtomicBegin() {
   }
   pthread_mutex_unlock(Gstm::mutex);
 
+  // Turn off all permission on the local heap
   REQUIRE(mprotect(local_heap, PAGE_SIZE, PROT_NONE) == 0)
       << "mprotect failed: " << strerror(errno);
+
+  context_.SaveContext();
 
   return;
 }
@@ -117,28 +96,10 @@ bool GThread::AtomicCommit() {
   return commited;
 }
 
-void GThread::AtomicAbort() {
-  // Rollback to where setjmp happens
-  longjmp(env_, SET_JPM_MAGIC);
-}
+void GThread::AtomicAbort() { context_.RestoreContext(); }
 
 void GThread::Join() {
   AtomicEnd();
   Gstm::WaitExited(predecessor_);
   AtomicBegin();
-}
-
-void GThread::BackupStack() {
-  // Page aligned size
-  size_t backup_size =
-      Gstm::cur_stack_size / PAGE_SIZE * PAGE_SIZE == Gstm::cur_stack_size
-          ? Gstm::cur_stack_size
-          : (Gstm::cur_stack_size / PAGE_SIZE + 1) * PAGE_SIZE;
-  Gstm::stack_backup = mmap(NULL, backup_size, PROT_READ | PROT_WRITE,
-                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  REQUIRE(Gstm::stack_backup != MAP_FAILED)
-      << "mmap failed: " << strerror(errno);
-
-  // Save the entire stack space so far.
-  memcpy(Gstm::stack_backup, Gstm::cur_stack, Gstm::cur_stack_size);
 }
