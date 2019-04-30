@@ -6,7 +6,6 @@
 #include <unistd.h>
 
 #include "../src/log.h"
-#include "../src/xcontext.h"
 
 #define MAGIC 117
 #define NUM_ITERATIONS 2
@@ -83,17 +82,13 @@ void func() {
 // void roll_back() { c.abort(); }
 
 int main() {
-  xcontext c;
-  c.initialize();
   int a = 1;
   int b = 2;
-  c.commit();
   // print_all(a, b);
   a++;
   b++;
   // printf("a: %d\n", a);
   print_all(a, b);
-  c.abort();
   // func();
   // roll_back();
 }

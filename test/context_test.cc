@@ -5,9 +5,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "../src/xcontext.h"
+#include "../src/stack_context.hh"
 
-xcontext c;
+int global = 0;
 
 void print_all(int a, int b) {
   printf("----------------\n");
@@ -32,16 +32,20 @@ void func() {
 // void roll_back() { c.abort(); }
 
 int main() {
-  c.initialize();
+  StackContext s;
   int a = 1;
   int b = 2;
-  c.commit();
-  // print_all(a, b);
+  s.SaveContext();
+  print_all(a, b);
   a++;
   b++;
-  // printf("a: %d\n", a);
+  global++;
+  printf("global = %d\n", global);
   print_all(a, b);
-  c.abort();
+  if (global != 3) {
+    s.RestoreContext();
+  }
+  printf("Done\n");
   // func();
   // roll_back();
 }
