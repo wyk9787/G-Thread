@@ -19,6 +19,7 @@ class StackContext {
   void CompleteSave(void* top_of_stack);
   void Phase2Save();
   void CompleteRestore(volatile void* padding);
+  void GetStackBottom();
 
   sigjmp_buf state_;
   void* stack_;

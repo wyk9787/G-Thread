@@ -8,7 +8,10 @@
 #include <string.h>
 #include <sys/mman.h>
 
-StackContext::StackContext() {
+#include "log.h"
+#include "util.hh"
+
+void StackContext::GetStackBottom() {
   // Here we figure out the bottom of the stack, which should be completely
   // stable across all of the program's execution (unless there is some weird
   // stack switching going on). To make sure we don't miss anything, just look
@@ -37,13 +40,20 @@ StackContext::StackContext() {
   bottom_of_stack_ = end;
 }
 
+StackContext::StackContext() {
+  GetStackBottom();
+  stack_ = mmap(NULL, MAX_STACK_SIZE, PROT_READ | PROT_WRITE,
+                MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
+}
+
 void* StackContext::bottom_of_stack_ = nullptr;
 
 void StackContext::DestroyContext() { free(stack_); }
 
 NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {
   stack_size_ = (uintptr_t)bottom_of_stack_ - (uintptr_t)top_of_stack;
-  stack_ = malloc(stack_size_);
+  memset(stack_, MAX_STACK_SIZE, 0);
   memcpy(stack_, top_of_stack, stack_size_);
 }
 

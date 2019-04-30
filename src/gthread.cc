@@ -8,7 +8,7 @@
 #include "log.h"
 #include "util.hh"
 
-GThread::GThread() : tid_(getpid()) { AtomicBegin(); }
+GThread::GThread() : tid_(getpid()), predecessor_(0) { AtomicBegin(); }
 
 void GThread::Create(void *(*start_routine)(void *), void *args) {
   AtomicEnd();
@@ -19,7 +19,6 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
   if (child_pid > 0) {
     // Parent process
     predecessor_ = child_pid;
-    INFO << "Child pid = " << child_pid;
 
     AtomicBegin();
     return;
@@ -42,6 +41,7 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 }
 
 void GThread::AtomicBegin() {
+  ColorLog("<atomic begin>");
   // Clear the local version mappings
   Gstm::read_set_version.clear();
   Gstm::write_set_version.clear();
@@ -55,7 +55,7 @@ void GThread::AtomicBegin() {
   pthread_mutex_unlock(Gstm::mutex);
 
   // Turn off all permission on the local heap
-  REQUIRE(mprotect(local_heap, PAGE_SIZE, PROT_NONE) == 0)
+  REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)
       << "mprotect failed: " << strerror(errno);
 
   context_.SaveContext();
@@ -64,19 +64,20 @@ void GThread::AtomicBegin() {
 }
 
 void GThread::AtomicEnd() {
+  ColorLog("<atomic end>");
   if (!AtomicCommit()) {
     AtomicAbort();
   }
 }
 
 bool GThread::AtomicCommit() {
-  ColorLog("Successfully commit!");
   // If we haven't read or written anything
   // we don't have to wait or commitUpdate local view of memory and return
   // true
   if (Gstm::read_set_version.empty() && Gstm::write_set_version.empty()) {
     // TODO: What do we need to update here?
     // Gstm::UpdateHeap();
+    ColorLog("<commit succeeded>\t\tNo read & write");
     return true;
   }
 
@@ -95,19 +96,12 @@ bool GThread::AtomicCommit() {
   pthread_mutex_unlock(Gstm::mutex);
 
   return commited;
-
-  // static int count = 0;
-  // if (count > 0 && count < 3) {
-  // INFO << "Rolling back... count = " << count;
-  // count++;
-  // return false;
-  //} else {
-  // count++;
-  // return true;
-  //}
 }
 
-void GThread::AtomicAbort() { context_.RestoreContext(); }
+void GThread::AtomicAbort() {
+  ColorLog("<rollback>");
+  context_.RestoreContext();
+}
 
 void GThread::Join() {
   AtomicEnd();

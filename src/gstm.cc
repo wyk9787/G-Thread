@@ -16,16 +16,13 @@ void* Gstm::stack_backup = nullptr;
 void* Gstm::cur_stack = nullptr;
 size_t Gstm::cur_stack_size = 0;
 pthread_mutex_t* Gstm::mutex = nullptr;
-std::unordered_map<void*, size_t> Gstm::read_set_version;
-std::unordered_map<void*, size_t> Gstm::write_set_version;
-std::unordered_map<void*, size_t> Gstm::local_page_version;
-Gstm::page_version_map_t* Gstm::global_page_version = nullptr;
+Gstm::private_mapping_t Gstm::read_set_version;
+Gstm::private_mapping_t Gstm::write_set_version;
+Gstm::private_mapping_t Gstm::local_page_version;
+Gstm::share_mapping_t* Gstm::global_page_version = nullptr;
 
 void Gstm::Initialize() {
-  // Initialize global heap and globals mapping with PROT_NONE permission
-  global_heap =
-      mmap(NULL, HEAP_SIZE, PROT_NONE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  REQUIRE(global_heap != MAP_FAILED) << "mmap failed: " << strerror(errno);
+  init_heap();
 
   // Set up segfault handler
   struct sigaction sa;
@@ -48,15 +45,23 @@ void Gstm::Initialize() {
                       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
   REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
-  global_page_version = new (buffer) page_version_map_t();
+  global_page_version = new (buffer) share_mapping_t();
 }
 
 void Gstm::HandleReads(void* page) {
-  size_t version_num = 1;
+  size_t version_num = 0;
   if (local_page_version.find(page) != local_page_version.end()) {
     version_num = local_page_version[page];
   }
-  read_set_version.insert({page, version_num});
+  // ColorLog("<read>\t\t" +
+  // std::to_string(reinterpret_cast<unsigned long long>(page)) +
+  //" version=" + std::to_string(version_num));
+  ColorLog("<read>");
+  char buf[100];
+  sprintf(buf, "At %p\n", page);
+  fputs(buf, stderr);
+
+  read_set_version[page] = version_num;
   mprotect(page, PAGE_SIZE, PROT_READ);
 }
 
@@ -65,6 +70,14 @@ void Gstm::HandleWrites(void* page) {
   if (local_page_version.find(page) != local_page_version.end()) {
     version_num = local_page_version[page];
   }
+  // ColorLog("<write>\t\t" +
+  // std::to_string(reinterpret_cast<unsigned long long>(page)) +
+  //" version=" + std::to_string(version_num));
+  ColorLog("<write>");
+  char buf[100];
+  sprintf(buf, "At %p\n", page);
+  fputs(buf, stderr);
+
   write_set_version.insert({page, version_num});
 
   // Unmap the original mapping
@@ -79,33 +92,50 @@ void Gstm::HandleWrites(void* page) {
 }
 
 void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
+  INFO << "Entering segfault handler";
   void* addr = info->si_addr;
   void* page = (void*)ROUND_DOWN((uintptr_t)addr, PAGE_SIZE);
+
+  // If the memory does not come from bump allocator
+  if ((uintptr_t)page < (uintptr_t)local_heap ||
+      (uintptr_t)page > ((uintptr_t)local_heap) + HEAP_SIZE) {
+    ColorLog("REAL Segfault at " +
+             std::to_string(reinterpret_cast<uintptr_t>(page)));
+    exit(1);
+  }
 
   if (read_set_version.find(page) != read_set_version.end()) {
     // If this is the second time this page enters the segfualt handler, it has
     // to be a write
     HandleWrites(page);
+    return;
   } else {
     // If this is the first time that accesses this page, we consider it as a
     // read
     HandleReads(page);
+    return;
   }
 
   if (write_set_version.find(page) != write_set_version.end()) {
     // If this is the third time that triggers the fault, this is an actual
     // segfault
-    FATAL << "Segmentation Fault at " << addr;
+    ColorLog("REAL Segfault at " +
+             std::to_string(reinterpret_cast<uintptr_t>(page)));
+    exit(1);
   }
 }
 
 void Gstm::WaitExited(pid_t predecessor) {
+  // This is the first process. There is no predecessor
+  if (predecessor == 0) {
+    return;
+  }
   int status;
   REQUIRE(waitpid(predecessor, &status, 0) == predecessor)
       << "waitpid failed: " << strerror(errno);
-  REQUIRE(WIFEXITED(status))
-      << "waitpid returned with an abnormal exit status: "
-      << WEXITSTATUS(status);
+  // REQUIRE(WIFEXITED(status))
+  //<< "waitpid returned with an abnormal exit status: "
+  //<< WEXITSTATUS(status);
 }
 
 __attribute__((noinline)) void* Gstm::GetSP() {
@@ -120,6 +150,9 @@ bool Gstm::IsHeapConsistent() {
   for (const auto& p : read_set_version) {
     if (global_page_version->find(p.first) != global_page_version->end() &&
         global_page_version->at(p.first) != p.second) {
+      ColorLog("<commit failed>\t\tread " +
+               *static_cast<std::string*>(p.first) + " " +
+               std::to_string(p.second));
       return false;
     }
   }
@@ -130,6 +163,9 @@ bool Gstm::IsHeapConsistent() {
   //   we have to roll back
   for (const auto& p : write_set_version) {
     if (global_page_version->find(p.first) != global_page_version->end()) {
+      ColorLog("<commit failed>\t\twrite " +
+               *static_cast<std::string*>(p.first) + " " +
+               std::to_string(p.second));
       return false;
     }
   }
@@ -139,6 +175,7 @@ bool Gstm::IsHeapConsistent() {
 
 void Gstm::CommitHeap() {
   for (const auto& p : write_set_version) {
+    // Since the local_heap and the
     size_t offset = reinterpret_cast<uintptr_t>(p.first) -
                     reinterpret_cast<uintptr_t>(local_heap);
     void* global_pos = reinterpret_cast<void*>(

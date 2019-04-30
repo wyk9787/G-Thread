@@ -7,15 +7,19 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "gallocator.hh"
+#include "private_alloc.hh"
+#include "share_alloc.hh"
 
 class Gstm {
   friend class GThread;
 
  public:
-  using page_version_map_t =
+  using share_mapping_t =
       std::unordered_map<void*, size_t, std::hash<void*>, std::equal_to<void*>,
-                         GAllocator<std::pair<void*, size_t>>>;
+                         ShareAllocator<std::pair<void*, size_t>>>;
+  using private_mapping_t =
+      std::unordered_map<void*, size_t, std::hash<void*>, std::equal_to<void*>,
+                         PrivateAllocator<std::pair<void*, size_t>>>;
 
   static void Initialize();
   static void WaitExited(pid_t predecessor);
@@ -37,11 +41,11 @@ class Gstm {
   static size_t cur_stack_size;  // The current stack size
   static pthread_mutex_t*
       mutex;  // A cross-process mutex that synchronizes the commit stage
-  static std::unordered_map<void*, size_t> read_set_version;
-  static std::unordered_map<void*, size_t> write_set_version;
-  static std::unordered_map<void*, size_t> local_page_version;
+  static private_mapping_t read_set_version;
+  static private_mapping_t write_set_version;
+  static private_mapping_t local_page_version;
 
-  static page_version_map_t*
+  static share_mapping_t*
       global_page_version;  // A global process-shared page version mapping
 };
 

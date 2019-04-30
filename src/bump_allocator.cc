@@ -5,19 +5,19 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "log.h"
 #include "util.hh"
 
 // Define the extern variables
 int shm_fd;
 void* local_heap;
 void* global_heap;
-
-static bool init = false;
 
 // A list of subheaps that's maintained by each process
 void* subheaps[NUM_SUBHEAP];
@@ -49,6 +49,11 @@ void init_heap() {
     subheaps[i] = cur;
     cur = (void*)((uintptr_t)cur + SUBHEAP_SIZE);
   }
+
+  // Initialize global heap and globals mapping with PROT_NONE permission
+  global_heap =
+      mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  REQUIRE(global_heap != MAP_FAILED) << "mmap failed: " << strerror(errno);
 }
 
 /**
@@ -58,14 +63,9 @@ void init_heap() {
  *              This function may return NULL when an error occurs.
  */
 void* xxmalloc(size_t size) {
-  // char buf[100];
-  // sprintf(buf, "Malloc %zu bytes\n", size);
-  // fputs(buf, stderr);
-
-  if (!init) {
-    init_heap();
-    init = true;
-  }
+  char buf[100];
+  sprintf(buf, "Malloc %zu bytes\n", size);
+  fputs(buf, stderr);
 
   pid_t pid = getpid();
   size_t index = pid % NUM_SUBHEAP;
