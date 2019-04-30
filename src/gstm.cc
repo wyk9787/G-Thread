@@ -35,7 +35,7 @@ void Gstm::Initialize() {
   memset(&sa, 0, sizeof(struct sigaction));
   sa.sa_sigaction = Gstm::SegfaultHandler;
   sa.sa_flags = SA_SIGINFO;
-  REQUIRE(sigaction(SIGSEGV, &sa, NULL) != 0)
+  REQUIRE(sigaction(SIGSEGV, &sa, NULL) == 0)
       << "sigaction failed: " << strerror(errno);
 
   // Set up inter-process lock
