@@ -70,30 +70,40 @@ void GThread::AtomicEnd() {
 }
 
 bool GThread::AtomicCommit() {
-  // If we haven't read or written anything
-  // we don't have to wait or commitUpdate local view of memory and return
-  // true
-  if (Gstm::read_set_version.empty() && Gstm::write_set_version.empty()) {
-    // TODO: What do we need to update here?
-    // Gstm::UpdateHeap();
+  //// If we haven't read or written anything
+  //// we don't have to wait or commitUpdate local view of memory and return
+  //// true
+  // if (Gstm::read_set_version.empty() && Gstm::write_set_version.empty()) {
+  //// TODO: What do we need to update here?
+  //// Gstm::UpdateHeap();
+  // return true;
+  //}
+
+  //// Wait for immediate predecessor to complete
+  // Gstm::WaitExited(predecessor_);
+
+  //// Now try to commit state. If and only if we succeed, return true
+
+  //// Lock to make sure only one process is commiting at a time
+  // pthread_mutex_lock(Gstm::mutex);
+  // bool commited = false;
+  // if (Gstm::IsHeapConsistent()) {
+  // Gstm::CommitHeap();
+  // commited = true;
+  //}
+  // pthread_mutex_unlock(Gstm::mutex);
+
+  // return commited;
+
+  static int count = 0;
+  if (count > 0 && count < 3) {
+    INFO << "Rolling back... count = " << count;
+    count++;
+    return false;
+  } else {
+    count++;
     return true;
   }
-
-  // Wait for immediate predecessor to complete
-  Gstm::WaitExited(predecessor_);
-
-  // Now try to commit state. If and only if we succeed, return true
-
-  // Lock to make sure only one process is commiting at a time
-  pthread_mutex_lock(Gstm::mutex);
-  bool commited = false;
-  if (Gstm::IsHeapConsistent()) {
-    Gstm::CommitHeap();
-    commited = true;
-  }
-  pthread_mutex_unlock(Gstm::mutex);
-
-  return commited;
 }
 
 void GThread::AtomicAbort() { context_.RestoreContext(); }

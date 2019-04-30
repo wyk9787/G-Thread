@@ -22,9 +22,6 @@ std::unordered_map<void*, size_t> Gstm::local_page_version;
 Gstm::page_version_map_t* Gstm::global_page_version = nullptr;
 
 void Gstm::Initialize() {
-  stack_top = reinterpret_cast<void*>(*reinterpret_cast<uintptr_t*>(GetSP()));
-  INFO << "stack_top = " << stack_top;
-
   // Initialize global heap and globals mapping with PROT_NONE permission
   global_heap =
       mmap(NULL, HEAP_SIZE, PROT_NONE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);

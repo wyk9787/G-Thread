@@ -6,24 +6,17 @@
 
 #define THREAD_NUM 4
 
+int total_times = 0;
+
 void *fn(void *arg) {
   int num = *(int *)arg;
   num++;
   std::cout << "This is test function " << num << std::endl;
-  // sleep(5);
+  std::cout << "Total times = " << total_times++ << std::endl;
   return (void *)1;
 }
 
 int main() {
-  // int *arr = (int *)malloc(4 * sizeof(int));
-  // for (int i = 0; i < 4; i++) {
-  // arr[i] = i;
-  //}
-
-  // for (int i = 0; i < 4; i++) {
-  // printf("arr[i] = %d\n", arr[i]);
-  //}
-
   Gstm::Initialize();
   GThread t;
   int *a = (int *)malloc(sizeof(int));

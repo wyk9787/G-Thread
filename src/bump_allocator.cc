@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include <assert.h>
 #include <fcntl.h>
 #include <malloc.h>
@@ -60,9 +58,9 @@ void init_heap() {
  *              This function may return NULL when an error occurs.
  */
 void* xxmalloc(size_t size) {
-  char buf[100];
-  sprintf(buf, "Malloc %zu bytes\n", size);
-  fputs(buf, stderr);
+  // char buf[100];
+  // sprintf(buf, "Malloc %zu bytes\n", size);
+  // fputs(buf, stderr);
 
   if (!init) {
     init_heap();

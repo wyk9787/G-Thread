@@ -24,7 +24,6 @@ StackContext::StackContext() {
     if (line_len >= 8 && strcmp(line + line_len - 8, "[stack]\n") == 0) {
       if (sscanf(line, "%p-%p", &beginning, &end) == 2) {
         found = true;
-        fprintf(stderr, "Found map from %p to %p!\n", beginning, end);
         break;
       }
     }
