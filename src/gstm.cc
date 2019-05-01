@@ -49,13 +49,7 @@ void Gstm::HandleReads(void* page) {
   if (local_page_version.find(page) != local_page_version.end()) {
     version_num = local_page_version[page];
   }
-  // ColorLog("<read>\t\t" +
-  // std::to_string(reinterpret_cast<unsigned long long>(page)) +
-  //" version=" + std::to_string(version_num));
-  ColorLog("<read>");
-  char buf[100];
-  sprintf(buf, "At %p\n", page);
-  fputs(buf, stderr);
+  ColorLog << "<read>\t\t" << page << " version: " << version_num << END;
 
   read_set_version[page] = version_num;
   mprotect(page, PAGE_SIZE, PROT_READ);
@@ -66,13 +60,8 @@ void Gstm::HandleWrites(void* page) {
   if (local_page_version.find(page) != local_page_version.end()) {
     version_num = local_page_version[page];
   }
-  // ColorLog("<write>\t\t" +
-  // std::to_string(reinterpret_cast<unsigned long long>(page)) +
-  //" version=" + std::to_string(version_num));
-  ColorLog("<write>");
-  char buf[100];
-  sprintf(buf, "At %p\n", page);
-  fputs(buf, stderr);
+
+  ColorLog << "<write>\t\t" << page << " version: " << version_num << END;
 
   write_set_version.insert({page, version_num});
 
@@ -88,15 +77,13 @@ void Gstm::HandleWrites(void* page) {
 }
 
 void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
-  INFO << "Entering segfault handler";
   void* addr = info->si_addr;
   void* page = (void*)ROUND_DOWN((uintptr_t)addr, PAGE_SIZE);
 
   // If the memory does not come from bump allocator
   if ((uintptr_t)page < (uintptr_t)local_heap ||
       (uintptr_t)page > ((uintptr_t)local_heap) + HEAP_SIZE) {
-    ColorLog("REAL Segfault at " +
-             std::to_string(reinterpret_cast<uintptr_t>(page)));
+    ColorLog << "REAL segfault at " << page << END;
     exit(1);
   }
 
@@ -115,8 +102,7 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
   if (write_set_version.find(page) != write_set_version.end()) {
     // If this is the third time that triggers the fault, this is an actual
     // segfault
-    ColorLog("REAL Segfault at " +
-             std::to_string(reinterpret_cast<uintptr_t>(page)));
+    ColorLog << "REAL segfault at " << page << END;
     exit(1);
   }
 }
@@ -142,9 +128,8 @@ bool Gstm::IsHeapConsistent() {
   for (const auto& p : read_set_version) {
     if (global_page_version->find(p.first) != global_page_version->end() &&
         global_page_version->at(p.first) != p.second) {
-      ColorLog("<commit failed>\t\tread " +
-               *static_cast<std::string*>(p.first) + " " +
-               std::to_string(p.second));
+      ColorLog << "<com.F>\t\tread " << p.first << " version:" << p.second
+               << END;
       return false;
     }
   }
@@ -155,9 +140,8 @@ bool Gstm::IsHeapConsistent() {
   //   we have to roll back
   for (const auto& p : write_set_version) {
     if (global_page_version->find(p.first) != global_page_version->end()) {
-      ColorLog("<commit failed>\t\twrite " +
-               *static_cast<std::string*>(p.first) + " " +
-               std::to_string(p.second));
+      ColorLog << "<com.F>\t\twrite " << p.first << " version:" << p.second
+               << END;
       return false;
     }
   }
@@ -180,6 +164,8 @@ void Gstm::CommitHeap() {
 }
 
 void Gstm::Finalize() {
+  REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE) == 0)
+      << "mprotect failed: " << strerror(errno);
   REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
       << "munmap failed: " << strerror(errno);
 }

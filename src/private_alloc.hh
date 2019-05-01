@@ -69,7 +69,7 @@ class PrivateAllocator {
 
   // Deallocate storage p of deleted elements
   void deallocate(pointer p, size_type num) {
-    // TODO: Actually free the memory
+    // INFO << "Deallocating " << p << " with " << num * sizeof(T) << " bytes";
   }
 
   // initialize elements of allocated storage p with value value

@@ -2,6 +2,7 @@
 #define UTIL_HH_
 
 #include <unistd.h>
+#include <iostream>
 
 #include "log.h"
 
@@ -20,39 +21,56 @@
 #define SET_JPM_MAGIC 117
 #define MIN_ALIGNED_SIZE 16
 
+#define NDEBUG
+
+inline std::ostream &ProcessChooseColor();
+
 // Color output
 
-#define RED_LOG(x, pid) (INFO << "\033[1;31m" << pid << ": " << x << "\033[0m")
-#define GREEN_LOG(x, pid) \
-  (INFO << "\033[1;32m" << pid << ": " << x << "\033[0m")
-#define YELLOW_LOG(x, pid) \
-  (INFO << "\033[1;33m" << pid << ": " << x << "\033[0m")
-#define MAGENTA_LOG(x, pid) \
-  (INFO << "\033[1;35m" << pid << ": " << x << "\033[0m")
-#define CYAN_LOG(x, pid) (INFO << "\033[1;36m" << pid << ": " << x << "\033[0m")
+#if defined(NDEBUG)
 
-#define ColorLog(x)          \
-  ({                         \
-    pid_t pid = getpid();    \
-    int color = pid % 5;     \
-    switch (color) {         \
-      case 0:                \
-        RED_LOG(x, pid);     \
-        break;               \
-      case 1:                \
-        GREEN_LOG(x, pid);   \
-        break;               \
-      case 2:                \
-        YELLOW_LOG(x, pid);  \
-        break;               \
-      case 3:                \
-        MAGENTA_LOG(x, pid); \
-        break;               \
-      case 4:                \
-        CYAN_LOG(x, pid);    \
-        break;               \
-    }                        \
-  })
+#define RED "\033[1;31m"
+#define GREEN "\033[1;32m"
+#define YELLOW "\033[1;33m"
+#define BLUE "\033[1;34m"
+#define MAGENTA "\033[1;35m"
+#define CYAN "\033[1;36m"
+#define END "\033[0m" << std::endl
+
+#define ColorLog ProcessChooseColor() << getpid() << ": "
+
+#else
+
+#define ColorLog
+#define END
+
+#endif
+
+inline std::ostream &ProcessChooseColor() {
+  pid_t pid = getpid();
+  int color = pid % 6;
+  switch (color) {
+    case 0:
+      return std::cerr << RED;
+      break;
+    case 1:
+      return std::cerr << GREEN;
+      break;
+    case 2:
+      return std::cerr << YELLOW;
+      break;
+    case 3:
+      return std::cerr << BLUE;
+      break;
+    case 4:
+      return std::cerr << MAGENTA;
+      break;
+    case 5:
+      return std::cerr << CYAN;
+      break;
+  }
+  return std::cerr;
+}
 
 extern int shm_fd;         // File descriptor for shared memory object
 extern void *local_heap;   // Local view of the state

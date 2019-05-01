@@ -9,17 +9,18 @@
 void *fn(void *arg) {
   int num = *(int *)arg;
   num++;
+  //*(int *)arg = num;
   return (void *)1;
 }
 
 int main() {
   Gstm::Initialize();
-  GThread t;
+  GThread *t = GThread::GetInstance();
   int *a = (int *)malloc(sizeof(int));
   *a = 117;
-  t.Create(fn, a);
-  t.Join();
+  t->Create(fn, a);
+  t->Join();
   // std::cout << "Done" << std::endl;
-  void *ret = t.GetRetVal();
+  void *ret = t->GetRetVal();
   Gstm::Finalize();
 }

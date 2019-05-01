@@ -8,7 +8,14 @@
 #include "log.h"
 #include "util.hh"
 
-GThread::GThread() : tid_(getpid()), predecessor_(0) { AtomicBegin(); }
+GThread *GThread::GetInstance() {
+  static char buffer[sizeof(GThread)];
+  GThread *instance = new (buffer) GThread();
+  instance->tid_ = getpid();
+  instance->predecessor_ = 0;
+  instance->AtomicBegin();
+  return instance;
+}
 
 void GThread::Create(void *(*start_routine)(void *), void *args) {
   AtomicEnd();
@@ -41,7 +48,7 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 }
 
 void GThread::AtomicBegin() {
-  ColorLog("<atomic begin>");
+  ColorLog << "<a.beg>" << END;
   // Clear the local version mappings
   Gstm::read_set_version.clear();
   Gstm::write_set_version.clear();
@@ -64,7 +71,7 @@ void GThread::AtomicBegin() {
 }
 
 void GThread::AtomicEnd() {
-  ColorLog("<atomic end>");
+  ColorLog << "<a.end>" << END;
   if (!AtomicCommit()) {
     AtomicAbort();
   }
@@ -77,7 +84,7 @@ bool GThread::AtomicCommit() {
   if (Gstm::read_set_version.empty() && Gstm::write_set_version.empty()) {
     // TODO: What do we need to update here?
     // Gstm::UpdateHeap();
-    ColorLog("<commit succeeded>\t\tNo read & write");
+    ColorLog << "<com.S>\t\tNo read & write" << END;
     return true;
   }
 
@@ -91,7 +98,7 @@ bool GThread::AtomicCommit() {
   bool commited = false;
   if (Gstm::IsHeapConsistent()) {
     Gstm::CommitHeap();
-    ColorLog("<commit succeeded>\t\tHeap Consistent");
+    ColorLog << "<com.S>\t\tconsistent heap" << END;
     commited = true;
   }
   pthread_mutex_unlock(Gstm::mutex);
@@ -100,7 +107,7 @@ bool GThread::AtomicCommit() {
 }
 
 void GThread::AtomicAbort() {
-  ColorLog("<rollback>");
+  ColorLog << "<rollback>" << END;
   context_.RestoreContext();
 }
 
