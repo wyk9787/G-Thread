@@ -76,6 +76,7 @@ extern int shm_fd;         // File descriptor for shared memory object
 extern void *local_heap;   // Local view of the state
 extern void *global_heap;  // Latest committed state of the global_heap
 
-void init_heap();  // Initialize both local and global_heap
+void GlobalHeapInit();
+void LocalHeapInit();
 
 #endif  // UTIL_HH_

@@ -9,7 +9,7 @@
 void *fn(void *arg) {
   int num = *(int *)arg;
   num++;
-  //*(int *)arg = num;
+  *(int *)arg = num;
   return (void *)1;
 }
 
@@ -20,7 +20,9 @@ int main() {
   *a = 117;
   t->Create(fn, a);
   t->Join();
-  // std::cout << "Done" << std::endl;
+  printf("a = %d\n", *a);
   void *ret = t->GetRetVal();
+  while (1)
+    ;
   Gstm::Finalize();
 }

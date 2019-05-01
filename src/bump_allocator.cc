@@ -22,7 +22,7 @@ void* global_heap;
 // A list of subheaps that's maintained by each process
 void* subheaps[NUM_SUBHEAP];
 
-void init_heap() {
+void GlobalHeapInit() {
   // Open a memory object to backup the file
   shm_fd = open("shm_object", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (shm_fd == -1) {
@@ -35,6 +35,15 @@ void init_heap() {
     exit(2);
   }
 
+  // Initialize global heap and globals mapping
+  global_heap =
+      mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  REQUIRE(global_heap != MAP_FAILED) << "mmap failed: " << strerror(errno);
+
+  LocalHeapInit();
+}
+
+void LocalHeapInit() {
   // Allocate memory for the global heap
   local_heap =
       mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, shm_fd, 0);
@@ -49,11 +58,6 @@ void init_heap() {
     subheaps[i] = cur;
     cur = (void*)((uintptr_t)cur + SUBHEAP_SIZE);
   }
-
-  // Initialize global heap and globals mapping with PROT_NONE permission
-  global_heap =
-      mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  REQUIRE(global_heap != MAP_FAILED) << "mmap failed: " << strerror(errno);
 }
 
 /**

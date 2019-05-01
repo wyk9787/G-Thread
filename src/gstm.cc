@@ -18,7 +18,7 @@ Gstm::private_mapping_t Gstm::local_page_version;
 Gstm::share_mapping_t* Gstm::global_page_version = nullptr;
 
 void Gstm::Initialize() {
-  init_heap();
+  GlobalHeapInit();
 
   // Set up segfault handler
   struct sigaction sa;
@@ -115,9 +115,6 @@ void Gstm::WaitExited(pid_t predecessor) {
   int status;
   REQUIRE(waitpid(predecessor, &status, 0) == predecessor)
       << "waitpid failed: " << strerror(errno);
-  // REQUIRE(WIFEXITED(status))
-  //<< "waitpid returned with an abnormal exit status: "
-  //<< WEXITSTATUS(status);
 }
 
 bool Gstm::IsHeapConsistent() {
@@ -134,18 +131,6 @@ bool Gstm::IsHeapConsistent() {
     }
   }
 
-  // TODO: Revisit the logic here
-  // Check for write set:
-  //   If any page in the write set has also shown in the global page set, then
-  //   we have to roll back
-  for (const auto& p : write_set_version) {
-    if (global_page_version->find(p.first) != global_page_version->end()) {
-      ColorLog << "<com.F>\t\twrite " << p.first << " version:" << p.second
-               << END;
-      return false;
-    }
-  }
-
   return true;
 }
 
@@ -157,15 +142,15 @@ void Gstm::CommitHeap() {
     void* global_pos = reinterpret_cast<void*>(
         reinterpret_cast<uintptr_t>(global_heap) + offset);
     memcpy(global_pos, p.first, PAGE_SIZE);
+    ColorLog << "<copy>\t\t" << p.first << " to " << global_pos << END;
 
     // Update the page version number
     global_page_version->insert(p);
+    ColorLog << "<commit>\t\t" << p.first << " version: " << p.second << END;
   }
 }
 
 void Gstm::Finalize() {
-  REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE) == 0)
-      << "mprotect failed: " << strerror(errno);
   REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
       << "munmap failed: " << strerror(errno);
 }

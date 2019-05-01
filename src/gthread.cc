@@ -34,6 +34,7 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 
     tid_ = getpid();
 
+    LocalHeapInit();
     AtomicBegin();
     // Execute thread function
     retval_ = start_routine(args);
@@ -49,6 +50,7 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 
 void GThread::AtomicBegin() {
   ColorLog << "<a.beg>" << END;
+
   // Clear the local version mappings
   Gstm::read_set_version.clear();
   Gstm::write_set_version.clear();
