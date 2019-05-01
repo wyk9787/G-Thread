@@ -9,7 +9,6 @@
 void *fn(void *arg) {
   int num = *(int *)arg;
   num++;
-  std::cout << "This is test function " << num << std::endl;
   return (void *)1;
 }
 
@@ -22,4 +21,5 @@ int main() {
   t.Join();
   // std::cout << "Done" << std::endl;
   void *ret = t.GetRetVal();
+  Gstm::Finalize();
 }

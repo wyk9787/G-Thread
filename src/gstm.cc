@@ -11,10 +11,6 @@
 #include "util.hh"
 
 // Initialize static members of Gstm
-void* Gstm::stack_top = nullptr;
-void* Gstm::stack_backup = nullptr;
-void* Gstm::cur_stack = nullptr;
-size_t Gstm::cur_stack_size = 0;
 pthread_mutex_t* Gstm::mutex = nullptr;
 Gstm::private_mapping_t Gstm::read_set_version;
 Gstm::private_mapping_t Gstm::write_set_version;
@@ -138,10 +134,6 @@ void Gstm::WaitExited(pid_t predecessor) {
   //<< WEXITSTATUS(status);
 }
 
-__attribute__((noinline)) void* Gstm::GetSP() {
-  return __builtin_frame_address(0);
-}
-
 bool Gstm::IsHeapConsistent() {
   // Check for read set:
   //   If any page in the read set that is also in the global page set does not
@@ -185,4 +177,9 @@ void Gstm::CommitHeap() {
     // Update the page version number
     global_page_version->insert(p);
   }
+}
+
+void Gstm::Finalize() {
+  REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
 }

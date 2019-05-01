@@ -28,11 +28,11 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
     tid_ = getpid();
 
     AtomicBegin();
-
     // Execute thread function
     retval_ = start_routine(args);
-
     AtomicEnd();
+
+    Gstm::Finalize();
 
     exit(0);
 
@@ -91,6 +91,7 @@ bool GThread::AtomicCommit() {
   bool commited = false;
   if (Gstm::IsHeapConsistent()) {
     Gstm::CommitHeap();
+    ColorLog("<commit succeeded>\t\tHeap Consistent");
     commited = true;
   }
   pthread_mutex_unlock(Gstm::mutex);
