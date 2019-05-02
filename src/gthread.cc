@@ -62,11 +62,14 @@ void GThread::AtomicBegin() {
   }
   pthread_mutex_unlock(Gstm::mutex);
 
-  // Map again at the beginning of the local heap to make sure the local heap
-  // represent the latest view of the file
+  // Unmap and map again at the beginning of the local heap to make sure the
+  // local heap represent the latest view of the file THIS IS IMPORTANT since
+  // whenther MAP_PRIVATE will reflect the latest state of the backed file is
+  // unspecified and from experiment, it doesn't do that on Linux.
+  REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
   void *tmp = mmap(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE,
                    shm_fd, 0);
-  ColorLog << "local heap = " << local_heap << ", tmp = " << tmp << END;
   REQUIRE(tmp == local_heap) << "mmap failed: " << strerror(errno);
 
   // Turn off all permission on the local heap

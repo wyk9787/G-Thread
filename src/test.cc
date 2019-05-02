@@ -22,7 +22,5 @@ int main() {
   t->Join();
   printf("a = %d\n", *a);
   void *ret = t->GetRetVal();
-  while (1)
-    ;
   Gstm::Finalize();
 }
