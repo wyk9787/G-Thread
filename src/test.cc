@@ -16,13 +16,17 @@ void *fn(void *arg) {
 int main() {
   Gstm::Initialize();
   // GThread *t = GThread::GetInstance();
-  GThread t1, t2;
+  GThread threads[THREAD_NUM];
   int *a = (int *)malloc(sizeof(int));
   *a = 117;
-  t1.Create(fn, a);
-  t2.Create(fn, a);
-  t1.Join();
-  t2.Join();
+
+  for (int i = 0; i < THREAD_NUM; i++) {
+    threads[i].Create(fn, a);
+  }
+  for (int i = 0; i < THREAD_NUM; i++) {
+    threads[i].Join();
+  }
+
   printf("a = %d\n", *a);
   // void *ret = t.GetRetVal();
   Gstm::Finalize();
