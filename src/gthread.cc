@@ -3,19 +3,23 @@
 #include <pthread.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sstream>
 
+#include "color_log.hh"
 #include "gstm.hh"
 #include "log.h"
 #include "util.hh"
 
-GThread *GThread::GetInstance() {
-  static char buffer[sizeof(GThread)];
-  GThread *instance = new (buffer) GThread();
-  instance->tid_ = getpid();
-  instance->predecessor_ = 0;
-  instance->AtomicBegin();
-  return instance;
-}
+// GThread *GThread::GetInstance() {
+// static char buffer[sizeof(GThread)];
+// GThread *instance = new (buffer) GThread();
+// instance->tid_ = getpid();
+// instance->predecessor_ = 0;
+// instance->AtomicBegin();
+// return instance;
+//}
+
+GThread::GThread() : tid_(getpid()), predecessor_(0) { AtomicBegin(); }
 
 void GThread::Create(void *(*start_routine)(void *), void *args) {
   AtomicEnd();
@@ -48,7 +52,9 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 }
 
 void GThread::AtomicBegin() {
-  ColorLog << "<a.beg>" << END;
+  ColorLog("<a.beg>");
+
+  context_.SaveContext();
 
   // Clear the local version mappings
   Gstm::read_set_version.clear();
@@ -76,13 +82,11 @@ void GThread::AtomicBegin() {
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)
       << "mprotect failed: " << strerror(errno);
 
-  context_.SaveContext();
-
   return;
 }
 
 void GThread::AtomicEnd() {
-  ColorLog << "<a.end>" << END;
+  ColorLog("<a.end>");
   if (!AtomicCommit()) {
     AtomicAbort();
   }
@@ -95,7 +99,7 @@ bool GThread::AtomicCommit() {
   if (Gstm::read_set_version.empty() && Gstm::write_set_version.empty()) {
     // TODO: What do we need to update here?
     // Gstm::UpdateHeap();
-    ColorLog << "<com.S>\t\tNo read & write" << END;
+    ColorLog("<com.S>\t\tNo read & write");
     return true;
   }
 
@@ -109,7 +113,7 @@ bool GThread::AtomicCommit() {
   bool commited = false;
   if (Gstm::IsHeapConsistent()) {
     Gstm::CommitHeap();
-    ColorLog << "<com.S>\t\tconsistent heap" << END;
+    ColorLog("<com.S>\t\tconsistent heap");
     commited = true;
   }
   pthread_mutex_unlock(Gstm::mutex);
@@ -118,7 +122,7 @@ bool GThread::AtomicCommit() {
 }
 
 void GThread::AtomicAbort() {
-  ColorLog << "<rollback>" << END;
+  ColorLog("<ROLLLLLLLLLL BACK!>");
   context_.RestoreContext();
 }
 

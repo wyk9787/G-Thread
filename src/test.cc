@@ -15,12 +15,15 @@ void *fn(void *arg) {
 
 int main() {
   Gstm::Initialize();
-  GThread *t = GThread::GetInstance();
+  // GThread *t = GThread::GetInstance();
+  GThread t1, t2;
   int *a = (int *)malloc(sizeof(int));
   *a = 117;
-  t->Create(fn, a);
-  t->Join();
+  t1.Create(fn, a);
+  t2.Create(fn, a);
+  t1.Join();
+  t2.Join();
   printf("a = %d\n", *a);
-  void *ret = t->GetRetVal();
+  // void *ret = t.GetRetVal();
   Gstm::Finalize();
 }

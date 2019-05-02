@@ -10,9 +10,9 @@
 // Possibly change to template in the future
 class GThread {
  public:
-  GThread() = default;
+  GThread();
 
-  static GThread *GetInstance();
+  // static GThread *GetInstance();
 
   // Possibly change to use Functional interface in the future
   void Create(void *(*start_routine)(void *), void *args);

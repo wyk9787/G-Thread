@@ -11,11 +11,17 @@
 #include "log.h"
 #include "util.hh"
 
+// Initialize static class members
+void* StackContext::bottom_of_stack_ = nullptr;
+bool StackContext::initialized_;
+
 void StackContext::GetStackBottom() {
   // Here we figure out the bottom of the stack, which should be completely
   // stable across all of the program's execution (unless there is some weird
   // stack switching going on). To make sure we don't miss anything, just look
   // for the stack mapping and find where it ends.
+
+  // TODO: Try to not call malloc here
   FILE* maps = fopen("/proc/self/maps", "r");
   char* line = NULL;
   size_t len = 0;
@@ -41,13 +47,15 @@ void StackContext::GetStackBottom() {
 }
 
 StackContext::StackContext() {
-  GetStackBottom();
+  if (!initialized_) {
+    GetStackBottom();
+    initialized_ = true;
+  }
+
   stack_ = mmap(NULL, MAX_STACK_SIZE, PROT_READ | PROT_WRITE,
                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
 }
-
-void* StackContext::bottom_of_stack_ = nullptr;
 
 void StackContext::DestroyContext() { free(stack_); }
 

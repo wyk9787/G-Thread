@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <memory>
 
+#include "color_log.hh"
 #include "log.h"
 #include "util.hh"
 
@@ -49,7 +50,7 @@ void Gstm::HandleReads(void* page) {
   if (local_page_version.find(page) != local_page_version.end()) {
     version_num = local_page_version[page];
   }
-  ColorLog << "<read>\t\t" << page << " version: " << version_num << END;
+  ColorLog("<read>\t\t" << page << " version: " << version_num);
 
   read_set_version[page] = version_num;
   mprotect(page, PAGE_SIZE, PROT_READ);
@@ -61,7 +62,7 @@ void Gstm::HandleWrites(void* page) {
     version_num = local_page_version[page] + 1;
   }
 
-  ColorLog << "<write>\t\t" << page << " version: " << version_num << END;
+  ColorLog("<write>\t\t" << page << " version: " << version_num);
 
   write_set_version[page] = version_num;
 
@@ -81,7 +82,7 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
   // If the memory does not come from bump allocator
   if ((uintptr_t)page < (uintptr_t)local_heap ||
       (uintptr_t)page > ((uintptr_t)local_heap) + HEAP_SIZE) {
-    ColorLog << "REAL segfault at " << page << END;
+    ColorLog("REAL segfault at " << page);
     exit(1);
   }
 
@@ -100,7 +101,7 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
   if (write_set_version.find(page) != write_set_version.end()) {
     // If this is the third time that triggers the fault, this is an actual
     // segfault
-    ColorLog << "REAL segfault at " << page << END;
+    ColorLog("REAL segfault at " << page);
     exit(1);
   }
 }
@@ -123,8 +124,7 @@ bool Gstm::IsHeapConsistent() {
   for (const auto& p : read_set_version) {
     if (global_page_version->find(p.first) != global_page_version->end() &&
         global_page_version->at(p.first) != p.second) {
-      ColorLog << "<com.F>\t\tread " << p.first << " version:" << p.second
-               << END;
+      ColorLog("<com.F>\t\tread " << p.first << " version:" << p.second);
       return false;
     }
   }
@@ -140,15 +140,17 @@ void Gstm::CommitHeap() {
     void* global_pos = reinterpret_cast<void*>(
         reinterpret_cast<uintptr_t>(global_heap) + offset);
     memcpy(global_pos, p.first, PAGE_SIZE);
-    ColorLog << "<copy>\t\t" << p.first << " to " << global_pos << END;
+    ColorLog("<copy>\t\t" << p.first << " to " << global_pos);
 
     // Update the page version number
     (*global_page_version)[p.first] = p.second;
-    ColorLog << "<commit>\t\t" << p.first << " version: " << p.second << END;
+    ColorLog("<commit>\t\t" << p.first << " version: " << p.second);
   }
 }
 
 void Gstm::Finalize() {
   REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
+  REQUIRE(munmap(global_heap, HEAP_SIZE) == 0)
       << "munmap failed: " << strerror(errno);
 }

@@ -25,6 +25,7 @@ class StackContext {
   void* stack_;
   size_t stack_size_;
 
+  static bool initialized_;
   static void* bottom_of_stack_;
 };
 
