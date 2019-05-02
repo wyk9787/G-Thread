@@ -34,7 +34,6 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 
     tid_ = getpid();
 
-    LocalHeapInit();
     AtomicBegin();
     // Execute thread function
     retval_ = start_routine(args);
@@ -62,6 +61,13 @@ void GThread::AtomicBegin() {
     Gstm::local_page_version.insert(p);
   }
   pthread_mutex_unlock(Gstm::mutex);
+
+  // Map again at the beginning of the local heap to make sure the local heap
+  // represent the latest view of the file
+  void *tmp = mmap(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE,
+                   shm_fd, 0);
+  ColorLog << "local heap = " << local_heap << ", tmp = " << tmp << END;
+  REQUIRE(tmp == local_heap) << "mmap failed: " << strerror(errno);
 
   // Turn off all permission on the local heap
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)

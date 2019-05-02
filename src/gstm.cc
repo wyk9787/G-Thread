@@ -72,8 +72,6 @@ void Gstm::HandleWrites(void* page) {
   void* ret = mmap(page, PAGE_SIZE, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   REQUIRE(ret != MAP_FAILED) << "mmap failed: " << strerror(errno);
-
-  mprotect(page, PAGE_SIZE, PROT_READ | PROT_WRITE);
 }
 
 void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
