@@ -13,7 +13,7 @@
 // Round a value x down to the next multiple of y
 #define ROUND_DOWN(x, y) ((x) % (y) == 0 ? (x) : (x) - ((x) % (y)))
 
-#define MAX_STACK_SIZE (PAGE_SIZE * 10)
+#define MAX_STACK_SIZE (PAGE_SIZE * 16)
 #define HEAP_SIZE 512 * 1024
 #define SUBHEAP_SIZE (HEAP_SIZE / NUM_SUBHEAP)
 #define NUM_SUBHEAP 1024
