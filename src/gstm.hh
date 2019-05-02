@@ -33,6 +33,8 @@ class Gstm {
   static void HandleReads(void* page);
   static void HandleWrites(void* page);
 
+  static void SetupInterProcessMutex();
+
   static pthread_mutex_t*
       mutex;  // A cross-process mutex that synchronizes the commit stage
   static private_mapping_t read_set_version;

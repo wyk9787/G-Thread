@@ -30,7 +30,17 @@ void Gstm::Initialize() {
       << "sigaction failed: " << strerror(errno);
 
   // Set up inter-process lock
+  SetupInterProcessMutex();
 
+  // Create a sharing mapping to back the global version map
+  void* buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                      MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
+  global_page_version = new (buffer) share_mapping_t();
+}
+
+void Gstm::SetupInterProcessMutex() {
   // This memory has to be accessed by different processes
   mutex = reinterpret_cast<pthread_mutex_t*>(
       mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
@@ -45,13 +55,6 @@ void Gstm::Initialize() {
       << "pthread_mutexattr_setphared failed: " << strerror(errno);
   REQUIRE(pthread_mutex_init(mutex, &mutex_attr) == 0)
       << "pthread_mutex_init failed: " << strerror(errno);
-
-  // Create a sharing mapping to back the global version map
-  void* buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
-                      MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-
-  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
-  global_page_version = new (buffer) share_mapping_t();
 }
 
 void Gstm::HandleReads(void* page) {

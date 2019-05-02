@@ -67,9 +67,9 @@ void LocalHeapInit() {
  *              This function may return NULL when an error occurs.
  */
 void* xxmalloc(size_t size) {
-  char buf[100];
-  sprintf(buf, "Malloc %zu bytes\n", size);
-  fputs(buf, stderr);
+  // char buf[100];
+  // sprintf(buf, "Malloc %zu bytes\n", size);
+  // fputs(buf, stderr);
 
   pid_t pid = getpid();
   size_t index = pid % NUM_SUBHEAP;
