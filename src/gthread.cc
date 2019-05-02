@@ -62,11 +62,9 @@ void GThread::AtomicBegin() {
   Gstm::local_page_version.clear();
 
   // Copy the global version mapping to local
-  pthread_mutex_lock(Gstm::mutex);
   for (const auto &p : *Gstm::global_page_version) {
     Gstm::local_page_version.insert(p);
   }
-  pthread_mutex_unlock(Gstm::mutex);
 
   // Unmap and map again at the beginning of the local heap to make sure the
   // local heap represent the latest view of the file THIS IS IMPORTANT since

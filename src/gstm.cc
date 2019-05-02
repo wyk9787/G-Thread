@@ -124,7 +124,9 @@ bool Gstm::IsHeapConsistent() {
   for (const auto& p : read_set_version) {
     if (global_page_version->find(p.first) != global_page_version->end() &&
         global_page_version->at(p.first) != p.second) {
-      ColorLog("<com.F>\t\tread " << p.first << " version:" << p.second);
+      ColorLog("<com.F>\t\tread "
+               << p.first << " local version:" << p.second
+               << ", global version: " << global_page_version->at(p.first));
       return false;
     }
   }
