@@ -56,14 +56,14 @@ void Gstm::HandleReads(void* page) {
 }
 
 void Gstm::HandleWrites(void* page) {
-  size_t version_num = 0;
+  size_t version_num = 1;
   if (local_page_version.find(page) != local_page_version.end()) {
-    version_num = local_page_version[page];
+    version_num = local_page_version[page] + 1;
   }
 
   ColorLog << "<write>\t\t" << page << " version: " << version_num << END;
 
-  write_set_version.insert({page, version_num});
+  write_set_version[page] = version_num;
 
   // Unmap the original mapping
   REQUIRE(munmap(page, PAGE_SIZE) == 0) << "munmap failed: " << strerror(errno);
@@ -143,7 +143,7 @@ void Gstm::CommitHeap() {
     ColorLog << "<copy>\t\t" << p.first << " to " << global_pos << END;
 
     // Update the page version number
-    global_page_version->insert(p);
+    (*global_page_version)[p.first] = p.second;
     ColorLog << "<commit>\t\t" << p.first << " version: " << p.second << END;
   }
 }
