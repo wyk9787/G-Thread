@@ -37,6 +37,15 @@ void Gstm::Initialize() {
            -1, 0));
   REQUIRE(mutex != MAP_FAILED) << "mmap failed: " << strerror(errno);
 
+  pthread_mutexattr_t mutex_attr;
+  REQUIRE(pthread_mutexattr_init(&mutex_attr) == 0)
+      << "pthread_mutexattr_init failed: " << strerror(errno);
+  REQUIRE(pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED) ==
+          0)
+      << "pthread_mutexattr_setphared failed: " << strerror(errno);
+  REQUIRE(pthread_mutex_init(mutex, &mutex_attr) == 0)
+      << "pthread_mutex_init failed: " << strerror(errno);
+
   // Create a sharing mapping to back the global version map
   void* buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
