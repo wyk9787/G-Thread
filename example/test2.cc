@@ -21,13 +21,12 @@ typedef struct blob {
 void *fn1(void *arg) {
   blob_t *b = (blob_t *)arg;
   for (int i = 0; i < A_SIZE; i++) {
-    b->a[i] = b->a[i] + 1;
+    b->a[i]++;
   }
   for (int i = 0; i < B_SIZE; i++) {
-    b->b[i] = b->b[i] + 1;
+    b->b[i]++;
   }
   b->c = b->c + 1;
-  printf("c = %zu\n", b->c);
 
   return nullptr;
 }
@@ -35,7 +34,7 @@ void *fn1(void *arg) {
 int main() {
   GThread threads[THREAD_NUM];
 
-  blob_t *b = (blob_t *)malloc(sizeof(blob_t));
+  blob_t *b = malloc(sizeof(blob_t));
   memset(b, sizeof(blob_t), 0);
 
   for (int i = 0; i < THREAD_NUM; i++) {
@@ -56,7 +55,7 @@ int main() {
     printf(" %d", b->b[i]);
   }
   printf("\n");
-  printf("c = %zu\n", b->c);
+  printf("c = %d\n", b->c);
 
   std::cerr << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
 }

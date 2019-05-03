@@ -17,6 +17,17 @@ Gstm::private_mapping_t Gstm::read_set_version;
 Gstm::private_mapping_t Gstm::write_set_version;
 Gstm::private_mapping_t Gstm::local_page_version;
 Gstm::share_mapping_t* Gstm::global_page_version = nullptr;
+size_t* Gstm::rollback_count_ = nullptr;
+
+__attribute__((constructor)) void init() {
+  ColorLog("START");
+  Gstm::Initialize();
+}
+
+__attribute__((destructor)) void end() {
+  ColorLog("END");
+  Gstm::Finalize();
+}
 
 void Gstm::Initialize() {
   GlobalHeapInit();
@@ -38,6 +49,13 @@ void Gstm::Initialize() {
 
   REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
   global_page_version = new (buffer) share_mapping_t();
+
+  // Create another sharing mapping for rollback count
+  buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
+  rollback_count_ = new (buffer) size_t();
 }
 
 void Gstm::SetupInterProcessMutex() {

@@ -1,17 +1,16 @@
-#include <pthread.h>
 #include <iostream>
 #include <vector>
 
-#define THREAD_NUM 1000
+#include "gstm.hh"
+#include "gthread.hh"
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#define THREAD_NUM 30
 
 // Forward declaration
 void *fn1(void *);
 void *fn2(void *);
 
 void *fn2(void *arg) {
-  pthread_mutex_lock(&mutex);
   int num = *(int *)arg;
   num++;
   *(int *)arg = num;
@@ -19,12 +18,10 @@ void *fn2(void *arg) {
   *(int *)arg = num;
   num++;
   *(int *)arg = num;
-  pthread_mutex_unlock(&mutex);
   return nullptr;
 }
 
 void *fn1(void *arg) {
-  pthread_mutex_lock(&mutex);
   int num = *(int *)arg;
   num++;
   *(int *)arg = num;
@@ -32,29 +29,31 @@ void *fn1(void *arg) {
   *(int *)arg = num;
   num++;
   *(int *)arg = num;
-  pthread_mutex_unlock(&mutex);
 
-  // pthread_t threads[THREAD_NUM];
-  // for (int i = 0; i < THREAD_NUM; i++) {
-  // pthread_create(&threads[i], NULL, fn2, arg);
-  //}
-  // for (int i = 0; i < THREAD_NUM; i++) {
-  // pthread_join(threads[i], NULL);
-  //}
+  GThread threads[THREAD_NUM];
+
+  for (int i = 0; i < THREAD_NUM; i++) {
+    threads[i].Create(fn2, arg);
+  }
+  for (int i = 0; i < THREAD_NUM; i++) {
+    threads[i].Join();
+  }
+
   return nullptr;
 }
 
 int main() {
-  pthread_t threads[THREAD_NUM];
+  GThread threads[THREAD_NUM];
   int *a = (int *)malloc(sizeof(int));
   *a = 0;
 
   for (int i = 0; i < THREAD_NUM; i++) {
-    pthread_create(&threads[i], NULL, fn1, a);
+    threads[i].Create(fn1, a);
   }
   for (int i = 0; i < THREAD_NUM; i++) {
-    pthread_join(threads[i], NULL);
+    threads[i].Join();
   }
 
   printf("a = %d\n", *a);
+  std::cerr << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
 }

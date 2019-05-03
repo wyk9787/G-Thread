@@ -115,6 +115,9 @@ bool GThread::AtomicCommit() {
     ColorLog("<com.S>\t\tconsistent heap");
     commited = true;
   }
+  if (commited == false) {
+    *Gstm::rollback_count_ = *Gstm::rollback_count_ + 1;
+  }
   pthread_mutex_unlock(Gstm::mutex);
 
   return commited;

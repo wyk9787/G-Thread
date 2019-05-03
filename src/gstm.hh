@@ -28,6 +28,8 @@ class Gstm {
   static void CommitHeap();
   static void SegfaultHandler(int signal, siginfo_t* info, void* ctx);
 
+  static size_t* rollback_count_;  // Keep track of how many rollbacks happened
+                                   // for the entire program
  private:
   // Handle reads and writes when a segfault happens
   static void HandleReads(void* page);
