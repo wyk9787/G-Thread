@@ -219,11 +219,10 @@ void Gstm::CommitHeap() {
 void Gstm::Finalize() {
   // Remember to restore the read and write premission, otherwise during
   // process automatic finishing phase, there will be segfaults.
-  REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE) == 0)
-      << "mprotect failed: " << strerror(errno);
+  // REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE) == 0)
+  //<< "mprotect failed: " << strerror(errno);
   // REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
   //<< "munmap failed: " << strerror(errno);
-  close(shm_fd);
   // REQUIRE(munmap(global_heap, HEAP_SIZE) == 0)
   //<< "munmap failed: " << strerror(errno);
   // REQUIRE(munmap(mutex, PAGE_SIZE) == 0)

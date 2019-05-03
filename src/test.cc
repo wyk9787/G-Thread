@@ -4,10 +4,10 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 1
+#define THREAD_NUM 100
 
-#define A_SIZE 800
-#define B_SIZE 800
+#define A_SIZE 80
+#define B_SIZE 80
 
 //#define DOUBLE
 
