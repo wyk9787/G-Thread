@@ -4,7 +4,7 @@
 #include "gstm.hh"
 #include "gthread.hh"
 
-#define THREAD_NUM 30
+#define THREAD_NUM 300
 
 #define A_SIZE 30
 #define B_SIZE 50

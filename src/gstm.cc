@@ -96,13 +96,20 @@ void Gstm::HandleWrites(void* page) {
 
   write_set_version[page] = version_num;
 
-  // Unmap the original mapping
+  // 1. make a copy of the current page
+  char buffer[PAGE_SIZE];
+  memcpy(buffer, page, PAGE_SIZE);
+
+  // 2. unmap the original mapping
   REQUIRE(munmap(page, PAGE_SIZE) == 0) << "munmap failed: " << strerror(errno);
 
-  // Create a new mmaping to host the new data
+  // 3. create a new mmaping to host the new data
   void* ret = mmap(page, PAGE_SIZE, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  REQUIRE(ret != MAP_FAILED) << "mmap failed: " << strerror(errno);
+  REQUIRE(ret == page) << "mmap failed: " << strerror(errno);
+
+  // 4. Copy the original data on this page back
+  memcpy(page, buffer, PAGE_SIZE);
 }
 
 void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
@@ -181,8 +188,8 @@ void Gstm::CommitHeap() {
 }
 
 void Gstm::Finalize() {
-  REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
-      << "munmap failed: " << strerror(errno);
-  REQUIRE(munmap(global_heap, HEAP_SIZE) == 0)
-      << "munmap failed: " << strerror(errno);
+  // Remember to restore the read and write premission, otherwise during
+  // process automatic finishing phase, there will be segfaults.
+  REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE) == 0)
+      << "mprotect failed: " << strerror(errno);
 }
