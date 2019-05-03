@@ -54,6 +54,7 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 void GThread::AtomicBegin() {
   ColorLog("<a.beg>");
 
+  // Save the context
   context_.SaveContext();
 
   // Clear the local version mappings

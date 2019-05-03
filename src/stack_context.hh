@@ -10,16 +10,17 @@
 class StackContext {
  public:
   StackContext();
+  ~StackContext() { DestroyContext(); }
 
   void SaveContext();
   void RestoreContext();
-  void DestroyContext();
 
  private:
   void CompleteSave(void* top_of_stack);
   void Phase2Save();
   void CompleteRestore(volatile void* padding);
   void GetStackBottom();
+  void DestroyContext();
 
   sigjmp_buf state_;
   void* stack_;

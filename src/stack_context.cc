@@ -46,22 +46,21 @@ void StackContext::GetStackBottom() {
   bottom_of_stack_ = end;
 }
 
-StackContext::StackContext() {
+StackContext::StackContext() : stack_(nullptr) {
   if (!initialized_) {
     GetStackBottom();
     initialized_ = true;
   }
-
-  stack_ = mmap(NULL, MAX_STACK_SIZE, PROT_READ | PROT_WRITE,
-                MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
 }
 
-void StackContext::DestroyContext() { free(stack_); }
-
 NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {
+  DestroyContext();
   stack_size_ = (uintptr_t)bottom_of_stack_ - (uintptr_t)top_of_stack;
-  memset(stack_, MAX_STACK_SIZE, 0);
+  stack_ = mmap(NULL, ROUND_UP(stack_size_, PAGE_SIZE), PROT_READ | PROT_WRITE,
+                MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
+
+  memset(stack_, ROUND_UP(stack_size_, PAGE_SIZE), 0);
   memcpy(stack_, top_of_stack, stack_size_);
 }
 
@@ -120,4 +119,11 @@ void StackContext::RestoreContext() {
   // This is unreachable, but doing some stuff here should help prevent the call
   // to CompleteRestore from being optimized as a tail call
   ((volatile char*)padding)[0] = 0;
+}
+
+void StackContext::DestroyContext() {
+  if (stack_ != nullptr) {
+    REQUIRE(munmap(stack_, ROUND_UP(stack_size_, PAGE_SIZE)) == 0)
+        << "munmap failed: " << strerror(errno);
+  }
 }

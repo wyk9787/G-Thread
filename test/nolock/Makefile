@@ -1,5 +1,5 @@
-ROOT = ..
+ROOT = ../..
+TARGETS = nolock 
 LIBS = pthread
-DIRS = nolock lock
 
 include $(ROOT)/common.mk
