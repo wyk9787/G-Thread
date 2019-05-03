@@ -4,10 +4,10 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 50
+#define THREAD_NUM 100
 
 #define A_SIZE 800
-#define B_SIZE 500
+#define B_SIZE 800
 
 // Forward declaration
 void *fn1(void *);
@@ -42,25 +42,25 @@ void *fn1(void *arg) {
   }
   b->c = b->c + 1;
 
-  GThread threads[THREAD_NUM];
+  // GThread threads[THREAD_NUM];
 
-  for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Create(fn2, b);
-  }
-  for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Join();
-  }
+  // for (int i = 0; i < THREAD_NUM; i++) {
+  // threads[i].Create(fn2, b);
+  //}
+  // for (int i = 0; i < THREAD_NUM; i++) {
+  // threads[i].Join();
+  //}
 
   return nullptr;
 }
 
 void verify(blob_t *b) {
-  int expected = THREAD_NUM * THREAD_NUM;
+  int expected = THREAD_NUM;
   for (int i = 0; i < A_SIZE; i++) {
     REQUIRE(b->a[i] == expected)
         << "Expect: " << expected << ", b->a[" << i << "]: " << b->a[i];
   }
-  for (int i = 0; i < A_SIZE; i++) {
+  for (int i = 0; i < B_SIZE; i++) {
     REQUIRE(b->b[i] == expected)
         << "Expect: " << expected << ", b->b[" << i << "]: " << b->b[i];
   }
@@ -68,11 +68,25 @@ void verify(blob_t *b) {
       << "Expect: " << expected << ", b->c: " << b->c;
 }
 
+void print_blob(blob_t *b) {
+  printf("a = ");
+  for (int i = 0; i < A_SIZE; i++) {
+    printf(" %d", b->a[i]);
+  }
+  printf("\n");
+
+  printf("b = ");
+  for (int i = 0; i < B_SIZE; i++) {
+    printf(" %d", b->b[i]);
+  }
+  printf("\n");
+}
+
 int main() {
   GThread threads[THREAD_NUM];
 
   blob_t *b = (blob_t *)malloc(sizeof(blob_t));
-  memset(b, sizeof(blob_t), 0);
+  memset(b, 0, sizeof(blob_t));
 
   for (int i = 0; i < THREAD_NUM; i++) {
     threads[i].Create(fn1, b);
@@ -81,6 +95,7 @@ int main() {
     threads[i].Join();
   }
 
+  // print_blob(b);
   verify(b);
 
   std::cerr << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
