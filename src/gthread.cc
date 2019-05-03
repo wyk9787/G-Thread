@@ -16,7 +16,10 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
   AtomicEnd();
 
   int child_pid = fork();
-  REQUIRE(child_pid >= 0) << "fork failed: " << strerror(errno);
+  if (child_pid < 0) {
+    ColorLog("FORK FAILED!!! QUITING ...");
+    exit(1);
+  }
 
   if (child_pid > 0) {
     // Parent process
