@@ -47,13 +47,13 @@ void GThread::AtomicBegin() {
   context_.SaveContext();
 
   // Clear the local version mappings
-  Gstm::read_set_version.clear();
-  Gstm::write_set_version.clear();
-  Gstm::local_page_version.clear();
+  Gstm::read_set_version->clear();
+  Gstm::write_set_version->clear();
+  Gstm::local_page_version->clear();
 
   // Copy the global version mapping to local
   for (const auto &p : *Gstm::global_page_version) {
-    Gstm::local_page_version.insert(p);
+    Gstm::local_page_version->insert(p);
   }
 
   // Unmap and map again at the beginning of the local heap to make sure the
@@ -84,7 +84,7 @@ bool GThread::AtomicCommit() {
   // If we haven't read or written anything
   // we don't have to wait or commitUpdate local view of memory and return
   // true
-  if (Gstm::read_set_version.empty() && Gstm::write_set_version.empty()) {
+  if (Gstm::read_set_version->empty() && Gstm::write_set_version->empty()) {
     // TODO: What do we need to update here?
     // Gstm::UpdateHeap();
     ColorLog("<com.S>\t\tNo read & write");

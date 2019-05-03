@@ -13,9 +13,9 @@
 
 // Initialize static members of Gstm
 pthread_mutex_t* Gstm::mutex = nullptr;
-Gstm::private_mapping_t Gstm::read_set_version;
-Gstm::private_mapping_t Gstm::write_set_version;
-Gstm::private_mapping_t Gstm::local_page_version;
+Gstm::private_mapping_t* Gstm::read_set_version;
+Gstm::private_mapping_t* Gstm::write_set_version;
+Gstm::private_mapping_t* Gstm::local_page_version;
 Gstm::share_mapping_t* Gstm::global_page_version = nullptr;
 size_t* Gstm::rollback_count_ = nullptr;
 void* Gstm::global_page_version_buffer = nullptr;
@@ -44,6 +44,20 @@ void Gstm::Initialize() {
 
   // Set up inter-process lock
   SetupInterProcessMutex();
+
+  InitMapping();
+}
+
+void Gstm::InitMapping() {
+  void* buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  read_set_version = new (buffer) private_mapping_t();
+  buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  write_set_version = new (buffer) private_mapping_t();
+  buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  local_page_version = new (buffer) private_mapping_t();
 
   // Create a sharing mapping to back the global version map
   global_page_version_buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
@@ -83,24 +97,24 @@ void Gstm::SetupInterProcessMutex() {
 
 void Gstm::HandleReads(void* page) {
   size_t version_num = 0;
-  if (local_page_version.find(page) != local_page_version.end()) {
-    version_num = local_page_version[page];
+  if (local_page_version->find(page) != local_page_version->end()) {
+    version_num = local_page_version->at(page);
   }
   ColorLog("<read>\t\t" << page << " version: " << version_num);
 
-  read_set_version[page] = version_num;
+  (*read_set_version)[page] = version_num;
   mprotect(page, PAGE_SIZE, PROT_READ);
 }
 
 void Gstm::HandleWrites(void* page) {
   size_t version_num = 1;
-  if (local_page_version.find(page) != local_page_version.end()) {
-    version_num = local_page_version[page] + 1;
+  if (local_page_version->find(page) != local_page_version->end()) {
+    version_num = local_page_version->at(page) + 1;
   }
 
   ColorLog("<write>\t\t" << page << " version: " << version_num);
 
-  write_set_version[page] = version_num;
+  (*write_set_version)[page] = version_num;
 
   // 1. make a copy of the current page
   char buffer[PAGE_SIZE];
@@ -125,11 +139,14 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
   // If the memory does not come from bump allocator
   if ((uintptr_t)page < (uintptr_t)local_heap ||
       (uintptr_t)page > ((uintptr_t)local_heap) + HEAP_SIZE) {
-    ColorLog("REAL segfault at " << page);
-    exit(1);
+    ColorLog("REAL segfault at " << addr);
+
+    // Use _exit() instead of exit() since exit() is not safe in segfault
+    // handler
+    _exit(1);
   }
 
-  if (read_set_version.find(page) != read_set_version.end()) {
+  if (read_set_version->find(page) != read_set_version->end()) {
     // If this is the second time this page enters the segfualt handler, it has
     // to be a write
     HandleWrites(page);
@@ -141,11 +158,14 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
     return;
   }
 
-  if (write_set_version.find(page) != write_set_version.end()) {
+  if (write_set_version->find(page) != write_set_version->end()) {
     // If this is the third time that triggers the fault, this is an actual
     // segfault
-    ColorLog("REAL segfault at " << page);
-    exit(1);
+    ColorLog("REAL segfault at " << addr);
+
+    // Use _exit() instead of exit() since exit() is not safe in segfault
+    // handler
+    _exit(1);
   }
 }
 
@@ -164,7 +184,7 @@ bool Gstm::IsHeapConsistent() {
   //   If any page in the read set that is also in the global page set does not
   //   match the version number with the one in the global page set, then we
   //   have to rollback
-  for (const auto& p : read_set_version) {
+  for (const auto& p : *read_set_version) {
     if (global_page_version->find(p.first) != global_page_version->end() &&
         global_page_version->at(p.first) != p.second) {
       ColorLog("<com.F>\t\tread "
@@ -178,7 +198,7 @@ bool Gstm::IsHeapConsistent() {
 }
 
 void Gstm::CommitHeap() {
-  for (const auto& p : write_set_version) {
+  for (const auto& p : *write_set_version) {
     // Calculate the offset between the local state and the global state
     size_t offset = reinterpret_cast<uintptr_t>(p.first) -
                     reinterpret_cast<uintptr_t>(local_heap);
@@ -201,12 +221,15 @@ void Gstm::Finalize() {
   // process automatic finishing phase, there will be segfaults.
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE) == 0)
       << "mprotect failed: " << strerror(errno);
-  REQUIRE(munmap(global_heap, HEAP_SIZE) == 0)
-      << "munmap failed: " << strerror(errno);
-  REQUIRE(munmap(mutex, PAGE_SIZE) == 0)
-      << "munmap failed: " << strerror(errno);
-  REQUIRE(munmap(global_page_version_buffer, PAGE_SIZE) == 0)
-      << "munmap failed: " << strerror(errno);
-  REQUIRE(munmap(rollback_count_buffer, PAGE_SIZE) == 0)
-      << "munmap failed: " << strerror(errno);
+  // REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
+  //<< "munmap failed: " << strerror(errno);
+  close(shm_fd);
+  // REQUIRE(munmap(global_heap, HEAP_SIZE) == 0)
+  //<< "munmap failed: " << strerror(errno);
+  // REQUIRE(munmap(mutex, PAGE_SIZE) == 0)
+  //<< "munmap failed: " << strerror(errno);
+  // REQUIRE(munmap(global_page_version_buffer, PAGE_SIZE) == 0)
+  //<< "munmap failed: " << strerror(errno);
+  // REQUIRE(munmap(rollback_count_buffer, PAGE_SIZE) == 0)
+  //<< "munmap failed: " << strerror(errno);
 }
