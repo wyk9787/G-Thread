@@ -4,10 +4,12 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 100
+#define THREAD_NUM 10
 
 #define A_SIZE 800
 #define B_SIZE 800
+
+#define DOUBLE
 
 // Forward declaration
 void *fn1(void *);
@@ -42,20 +44,26 @@ void *fn1(void *arg) {
   }
   b->c = b->c + 1;
 
-  // GThread threads[THREAD_NUM];
+#if defined(DOUBLE)
+  GThread threads[THREAD_NUM];
 
-  // for (int i = 0; i < THREAD_NUM; i++) {
-  // threads[i].Create(fn2, b);
-  //}
-  // for (int i = 0; i < THREAD_NUM; i++) {
-  // threads[i].Join();
-  //}
+  for (int i = 0; i < THREAD_NUM; i++) {
+    threads[i].Create(fn2, b);
+  }
+  for (int i = 0; i < THREAD_NUM; i++) {
+    threads[i].Join();
+  }
+#endif
 
   return nullptr;
 }
 
 void verify(blob_t *b) {
+#if defined(DOUBLE)
+  int expected = THREAD_NUM * THREAD_NUM;
+#else
   int expected = THREAD_NUM;
+#endif
   for (int i = 0; i < A_SIZE; i++) {
     REQUIRE(b->a[i] == expected)
         << "Expect: " << expected << ", b->a[" << i << "]: " << b->a[i];
