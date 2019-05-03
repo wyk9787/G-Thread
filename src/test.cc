@@ -1,8 +1,7 @@
 #include <iostream>
 #include <vector>
 
-#include "gstm.hh"
-#include "gthread.hh"
+#include "libgthread.hh"
 
 #define THREAD_NUM 300
 
@@ -27,7 +26,6 @@ void *fn1(void *arg) {
     b->b[i] = b->b[i] + 1;
   }
   b->c = b->c + 1;
-  printf("c = %zu\n", b->c);
 
   return nullptr;
 }

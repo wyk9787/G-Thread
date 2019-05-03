@@ -10,15 +10,6 @@
 #include "log.h"
 #include "util.hh"
 
-// GThread *GThread::GetInstance() {
-// static char buffer[sizeof(GThread)];
-// GThread *instance = new (buffer) GThread();
-// instance->tid_ = getpid();
-// instance->predecessor_ = 0;
-// instance->AtomicBegin();
-// return instance;
-//}
-
 GThread::GThread() : tid_(getpid()), predecessor_(0) { AtomicBegin(); }
 
 void GThread::Create(void *(*start_routine)(void *), void *args) {
