@@ -34,8 +34,6 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
     retval_ = start_routine(args);
     AtomicEnd();
 
-    Gstm::Finalize();
-
     exit(0);
 
     return;

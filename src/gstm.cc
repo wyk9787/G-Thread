@@ -18,6 +18,8 @@ Gstm::private_mapping_t Gstm::write_set_version;
 Gstm::private_mapping_t Gstm::local_page_version;
 Gstm::share_mapping_t* Gstm::global_page_version = nullptr;
 size_t* Gstm::rollback_count_ = nullptr;
+void* Gstm::global_page_version_buffer = nullptr;
+void* Gstm::rollback_count_buffer = nullptr;
 
 __attribute__((constructor)) void init() {
   ColorLog("START");
@@ -44,18 +46,20 @@ void Gstm::Initialize() {
   SetupInterProcessMutex();
 
   // Create a sharing mapping to back the global version map
-  void* buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
-                      MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  global_page_version_buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                                    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
-  global_page_version = new (buffer) share_mapping_t();
+  REQUIRE(global_page_version_buffer != MAP_FAILED)
+      << "mmap failed: " << strerror(errno);
+  global_page_version = new (global_page_version_buffer) share_mapping_t();
 
   // Create another sharing mapping for rollback count
-  buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
-                MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  rollback_count_buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                               MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
-  rollback_count_ = new (buffer) size_t();
+  REQUIRE(rollback_count_buffer != MAP_FAILED)
+      << "mmap failed: " << strerror(errno);
+  rollback_count_ = new (rollback_count_buffer) size_t();
 }
 
 void Gstm::SetupInterProcessMutex() {
@@ -73,6 +77,8 @@ void Gstm::SetupInterProcessMutex() {
       << "pthread_mutexattr_setphared failed: " << strerror(errno);
   REQUIRE(pthread_mutex_init(mutex, &mutex_attr) == 0)
       << "pthread_mutex_init failed: " << strerror(errno);
+  REQUIRE(pthread_mutexattr_destroy(&mutex_attr) == 0)
+      << "pthread_mutex_attr_destroy failed: " << strerror(errno);
 }
 
 void Gstm::HandleReads(void* page) {
@@ -173,13 +179,16 @@ bool Gstm::IsHeapConsistent() {
 
 void Gstm::CommitHeap() {
   for (const auto& p : write_set_version) {
-    // Since the local_heap and the
+    // Calculate the offset between the local state and the global state
     size_t offset = reinterpret_cast<uintptr_t>(p.first) -
                     reinterpret_cast<uintptr_t>(local_heap);
     void* global_pos = reinterpret_cast<void*>(
         reinterpret_cast<uintptr_t>(global_heap) + offset);
     memcpy(global_pos, p.first, PAGE_SIZE);
     ColorLog("<copy>\t\t" << p.first << " to " << global_pos);
+
+    REQUIRE(munmap(p.first, PAGE_SIZE) == 0)
+        << "munmap failed: " << strerror(errno);
 
     // Update the page version number
     (*global_page_version)[p.first] = p.second;
@@ -192,4 +201,12 @@ void Gstm::Finalize() {
   // process automatic finishing phase, there will be segfaults.
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE) == 0)
       << "mprotect failed: " << strerror(errno);
+  REQUIRE(munmap(global_heap, HEAP_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
+  REQUIRE(munmap(mutex, PAGE_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
+  REQUIRE(munmap(global_page_version_buffer, PAGE_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
+  REQUIRE(munmap(rollback_count_buffer, PAGE_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
 }

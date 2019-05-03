@@ -45,6 +45,9 @@ class Gstm {
 
   static share_mapping_t*
       global_page_version;  // A global process-shared page version mapping
+
+  static void* global_page_version_buffer;
+  static void* rollback_count_buffer;
 };
 
 #endif  // GSTM_HH_
