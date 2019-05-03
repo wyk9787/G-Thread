@@ -1,8 +1,6 @@
 #include <iostream>
+#include <thread>
 #include <vector>
-
-#include "gstm.hh"
-#include "gthread.hh"
 
 #define THREAD_NUM 100
 
@@ -30,33 +28,29 @@ void *fn1(void *arg) {
   num++;
   *(int *)arg = num;
 
-  GThread threads[THREAD_NUM];
+  std::thread *threads[THREAD_NUM];
 
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Create(fn2, arg);
+    threads[i] = new std::thread(fn2, arg);
   }
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Join();
+    threads[i]->join();
   }
 
   return nullptr;
 }
 
 int main() {
-  Gstm::Initialize();
-  // GThread *t = GThread::GetInstance();
-  GThread threads[THREAD_NUM];
+  std::thread *threads[THREAD_NUM];
   int *a = (int *)malloc(sizeof(int));
   *a = 0;
 
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Create(fn1, a);
+    threads[i] = new std::thread(fn1, a);
   }
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Join();
+    threads[i]->join();
   }
 
   printf("a = %d\n", *a);
-  // void *ret = t.GetRetVal();
-  Gstm::Finalize();
 }
