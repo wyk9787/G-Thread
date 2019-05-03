@@ -49,6 +49,7 @@ void Gstm::Initialize() {
 }
 
 void Gstm::InitMapping() {
+  // Private mapping
   void* buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   read_set_version = new (buffer) private_mapping_t();
@@ -59,7 +60,7 @@ void Gstm::InitMapping() {
                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   local_page_version = new (buffer) private_mapping_t();
 
-  // Create a sharing mapping to back the global version map
+  // Shared mapping
   global_page_version_buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                                     MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
@@ -67,7 +68,6 @@ void Gstm::InitMapping() {
       << "mmap failed: " << strerror(errno);
   global_page_version = new (global_page_version_buffer) share_mapping_t();
 
-  // Create another sharing mapping for rollback count
   rollback_count_buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                                MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
@@ -103,7 +103,8 @@ void Gstm::HandleReads(void* page) {
   ColorLog("<read>\t\t" << page << " version: " << version_num);
 
   (*read_set_version)[page] = version_num;
-  mprotect(page, PAGE_SIZE, PROT_READ);
+  REQUIRE(mprotect(page, PAGE_SIZE, PROT_READ) == 0)
+      << "mprotect failed: " << strerror(errno);
 }
 
 void Gstm::HandleWrites(void* page) {
@@ -116,20 +117,11 @@ void Gstm::HandleWrites(void* page) {
 
   (*write_set_version)[page] = version_num;
 
-  // 1. make a copy of the current page
-  char buffer[PAGE_SIZE];
-  memcpy(buffer, page, PAGE_SIZE);
-
-  // 2. unmap the original mapping
-  REQUIRE(munmap(page, PAGE_SIZE) == 0) << "munmap failed: " << strerror(errno);
-
-  // 3. create a new mmaping to host the new data
-  void* ret = mmap(page, PAGE_SIZE, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  REQUIRE(ret == page) << "mmap failed: " << strerror(errno);
-
-  // 4. Copy the original data on this page back
-  memcpy(page, buffer, PAGE_SIZE);
+  if (mprotect(page, PAGE_SIZE, PROT_READ | PROT_WRITE) != 0) {
+    // ColorLog("mprotect failed!!");
+    INFO << getpid() << ": mprotect failed at " << page;
+    _exit(1);
+  }
 }
 
 void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
@@ -153,7 +145,7 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
     return;
   } else {
     // If this is the first time that accesses this page, we consider it as a
-    // read
+    // to be a read
     HandleReads(page);
     return;
   }
@@ -206,9 +198,6 @@ void Gstm::CommitHeap() {
         reinterpret_cast<uintptr_t>(global_heap) + offset);
     memcpy(global_pos, p.first, PAGE_SIZE);
     ColorLog("<copy>\t\t" << p.first << " to " << global_pos);
-
-    REQUIRE(munmap(p.first, PAGE_SIZE) == 0)
-        << "munmap failed: " << strerror(errno);
 
     // Update the page version number
     (*global_page_version)[p.first] = p.second;

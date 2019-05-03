@@ -62,8 +62,8 @@ void GThread::AtomicBegin() {
   // unspecified and from experiment, it doesn't do that on Linux.
   REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
       << "munmap failed: " << strerror(errno);
-  void *tmp = mmap(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE,
-                   shm_fd, 0);
+  void *tmp = mmap(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_FIXED, shm_fd, 0);
   REQUIRE(tmp == local_heap) << "mmap failed: " << strerror(errno);
 
   // Turn off all permission on the local heap
