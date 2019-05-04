@@ -1,10 +1,11 @@
 #include <assert.h>
 #include <iostream>
 
+#include "color_log.hh"
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 50
+#define THREAD_NUM 2
 
 #define A_SIZE 30
 #define B_SIZE 50
@@ -30,6 +31,7 @@ void *fn2(void *arg) {
     b->b[i] = b->b[i] + 1;
   }
   b->c = b->c + 1;
+  ColorLog("c2 = " << b->c);
 
   return nullptr;
 }
@@ -43,6 +45,7 @@ void *fn1(void *arg) {
     b->b[i] = b->b[i] + 1;
   }
   b->c = b->c + 1;
+  ColorLog("c1 = " << b->c);
 
 #if defined(DOUBLE)
   GThread threads[THREAD_NUM];
@@ -54,13 +57,14 @@ void *fn1(void *arg) {
     threads[i].Join();
   }
 #endif
+  ColorLog("c3 = " << b->c);
 
   return nullptr;
 }
 
 void verify(blob_t *b) {
 #if defined(DOUBLE)
-  int expected = THREAD_NUM * THREAD_NUM;
+  int expected = (THREAD_NUM + 1) * THREAD_NUM;
 #else
   int expected = THREAD_NUM;
 #endif
@@ -103,9 +107,8 @@ int main() {
     threads[i].Join();
   }
 
-  // print_blob(b);
-  verify(b);
-
   std::cout << "c = " << b->c << std::endl;
   std::cout << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
+  print_blob(b);
+  verify(b);
 }

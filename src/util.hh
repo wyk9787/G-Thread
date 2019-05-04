@@ -22,7 +22,7 @@
 #define SET_JPM_MAGIC 117
 #define MIN_ALIGNED_SIZE 16
 
-//#define NDEBUG
+#define NDEBUG
 
 extern int shm_fd;         // File descriptor for shared memory object
 extern void *local_heap;   // Local view of the state

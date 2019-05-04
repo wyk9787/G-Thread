@@ -11,6 +11,7 @@
 class GThread {
  public:
   GThread();
+  GThread(bool first);
 
   // static GThread *GetInstance();
 
@@ -22,10 +23,10 @@ class GThread {
   pid_t GetTid() { return tid_; }
   void *GetRetVal() { return retval_; }
 
- private:
   // Begins an atomic section
   void AtomicBegin();
 
+ private:
   // Ends an atomic section
   void AtomicEnd();
 
@@ -41,6 +42,7 @@ class GThread {
   void *retval_;          // return value from the function
   void *local_heap_;      // Local view of the global heap
   StackContext context_;  // stack context
+  bool first_gthread_;
 };
 
 #endif  // GTHREAD_HH_

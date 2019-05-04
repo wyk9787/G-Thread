@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#include "color_log.hh"
 #include "log.h"
 #include "util.hh"
 
@@ -85,6 +86,8 @@ NO_INLINE void StackContext::SaveContext() {
     // more sure that we aren't messing around in the very part of the stack
     // that we are trying to save.
     Phase2Save();
+  } else {
+    ColorLog("<Rollback.S>");
   }
 }
 

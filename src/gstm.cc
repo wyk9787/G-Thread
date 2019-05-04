@@ -21,16 +21,6 @@ size_t* Gstm::rollback_count_ = nullptr;
 void* Gstm::global_page_version_buffer = nullptr;
 void* Gstm::rollback_count_buffer = nullptr;
 
-__attribute__((constructor)) void init() {
-  ColorLog("START");
-  Gstm::Initialize();
-}
-
-__attribute__((destructor)) void end() {
-  ColorLog("END");
-  Gstm::Finalize();
-}
-
 void Gstm::Initialize() {
   GlobalHeapInit();
 
@@ -118,8 +108,7 @@ void Gstm::HandleWrites(void* page) {
   (*write_set_version)[page] = version_num;
 
   if (mprotect(page, PAGE_SIZE, PROT_READ | PROT_WRITE) != 0) {
-    // ColorLog("mprotect failed!!");
-    INFO << getpid() << ": mprotect failed at " << page;
+    ColorLog("mprotect failed!!");
     _exit(1);
   }
 }
@@ -131,7 +120,10 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
   // If the memory does not come from bump allocator
   if ((uintptr_t)page < (uintptr_t)local_heap ||
       (uintptr_t)page > ((uintptr_t)local_heap) + HEAP_SIZE) {
-    ColorLog("REAL segfault at " << addr);
+    // ColorLog("REAL segfault at " << addr);
+    char buffer[20];
+    sprintf(buffer, "%d: REAL SEGFAULT\n", getpid());
+    fputs(buffer, stderr);
 
     // Use _exit() instead of exit() since exit() is not safe in segfault
     // handler

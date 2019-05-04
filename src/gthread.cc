@@ -10,7 +10,10 @@
 #include "log.h"
 #include "util.hh"
 
-GThread::GThread() : tid_(getpid()), predecessor_(0) { AtomicBegin(); }
+GThread::GThread() : tid_(getpid()), predecessor_(0), first_gthread_(false) {}
+
+GThread::GThread(bool first)
+    : tid_(getpid()), predecessor_(0), first_gthread_(first) {}
 
 void GThread::Create(void *(*start_routine)(void *), void *args) {
   AtomicEnd();
@@ -24,7 +27,9 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
   if (child_pid > 0) {
     // Parent process
     predecessor_ = child_pid;
-
+    if (!first_gthread_) {
+      ColorLog("<fork>\t\tchild pid: " << child_pid);
+    }
     AtomicBegin();
     return;
   } else {
@@ -44,7 +49,9 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
 }
 
 void GThread::AtomicBegin() {
-  ColorLog("<a.beg>");
+  if (!first_gthread_) {
+    ColorLog("<a.beg>");
+  }
 
   // Save the context
   context_.SaveContext();
@@ -55,9 +62,11 @@ void GThread::AtomicBegin() {
   Gstm::local_page_version->clear();
 
   // Copy the global version mapping to local
+  pthread_mutex_lock(Gstm::mutex);
   for (const auto &p : *Gstm::global_page_version) {
     Gstm::local_page_version->insert(p);
   }
+  pthread_mutex_unlock(Gstm::mutex);
 
   // Unmap and map again at the beginning of the local heap to make sure the
   // local heap represent the latest view of the file THIS IS IMPORTANT since
@@ -77,7 +86,9 @@ void GThread::AtomicBegin() {
 }
 
 void GThread::AtomicEnd() {
-  ColorLog("<a.end>");
+  if (!first_gthread_) {
+    ColorLog("<a.end>");
+  }
   if (!AtomicCommit()) {
     AtomicAbort();
   }
@@ -88,9 +99,9 @@ bool GThread::AtomicCommit() {
   // we don't have to wait or commitUpdate local view of memory and return
   // true
   if (Gstm::read_set_version->empty() && Gstm::write_set_version->empty()) {
-    // TODO: What do we need to update here?
-    // Gstm::UpdateHeap();
-    ColorLog("<com.S>\t\tNo read & write");
+    if (!first_gthread_) {
+      ColorLog("<com.S>\t\tNo read & write");
+    }
     return true;
   }
 
