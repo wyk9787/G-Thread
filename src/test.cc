@@ -6,8 +6,8 @@
 
 #define THREAD_NUM 50
 
-#define A_SIZE 800
-#define B_SIZE 1000
+#define A_SIZE 30
+#define B_SIZE 50
 
 #define DOUBLE
 

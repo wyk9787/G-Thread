@@ -1,15 +1,16 @@
 #include <assert.h>
+#include <pthread.h>
+#include <string.h>
 #include <iostream>
 
-#include "libgthread.hh"
-#include "log.h"
+#define THREAD_NUM 10
 
-#define THREAD_NUM 50
-
-#define A_SIZE 800
-#define B_SIZE 1000
+#define A_SIZE 30
+#define B_SIZE 50
 
 #define DOUBLE
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Forward declaration
 void *fn1(void *);
@@ -36,6 +37,7 @@ void *fn2(void *arg) {
 
 void *fn1(void *arg) {
   blob_t *b = (blob_t *)arg;
+  pthread_mutex_lock(&mutex);
   for (int i = 0; i < A_SIZE; i++) {
     b->a[i] = b->a[i] + 1;
   }
@@ -45,35 +47,17 @@ void *fn1(void *arg) {
   b->c = b->c + 1;
 
 #if defined(DOUBLE)
-  GThread threads[THREAD_NUM];
-
+  pthread_t threads[THREAD_NUM];
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Create(fn2, b);
+    pthread_create(&threads[i], NULL, fn2, b);
   }
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Join();
+    pthread_join(threads[i], NULL);
   }
 #endif
+  pthread_mutex_unlock(&mutex);
 
   return nullptr;
-}
-
-void verify(blob_t *b) {
-#if defined(DOUBLE)
-  int expected = THREAD_NUM * THREAD_NUM;
-#else
-  int expected = THREAD_NUM;
-#endif
-  for (int i = 0; i < A_SIZE; i++) {
-    REQUIRE(b->a[i] == expected)
-        << "Expect: " << expected << ", b->a[" << i << "]: " << b->a[i];
-  }
-  for (int i = 0; i < B_SIZE; i++) {
-    REQUIRE(b->b[i] == expected)
-        << "Expect: " << expected << ", b->b[" << i << "]: " << b->b[i];
-  }
-  REQUIRE(b->c == (size_t)expected)
-      << "Expect: " << expected << ", b->c: " << b->c;
 }
 
 void print_blob(blob_t *b) {
@@ -91,21 +75,19 @@ void print_blob(blob_t *b) {
 }
 
 int main() {
-  GThread threads[THREAD_NUM];
+  pthread_t threads[THREAD_NUM];
 
   blob_t *b = (blob_t *)malloc(sizeof(blob_t));
   memset(b, 0, sizeof(blob_t));
 
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Create(fn1, b);
+    pthread_create(&threads[i], NULL, fn1, b);
   }
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Join();
+    pthread_join(threads[i], NULL);
   }
 
-  // print_blob(b);
-  verify(b);
+  print_blob(b);
 
   std::cout << "c = " << b->c << std::endl;
-  std::cout << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
 }
