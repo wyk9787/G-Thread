@@ -96,6 +96,7 @@ void StackContext::CompleteRestore(volatile void* padding) {
   memcpy(reinterpret_cast<void*>(
              (reinterpret_cast<uintptr_t>(bottom_of_stack_) - stack_size_)),
          stack_, stack_size_);
+  ColorLog("Before longjmp");
   // And restore the rest of the machine state
   siglongjmp(state_, 1);
 }

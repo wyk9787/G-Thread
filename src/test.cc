@@ -5,12 +5,12 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 2
+#define THREAD_NUM 500
 
-#define A_SIZE 30
-#define B_SIZE 50
+#define A_SIZE 800
+#define B_SIZE 1000
 
-#define DOUBLE
+//#define DOUBLE
 
 // Forward declaration
 void *fn1(void *);
@@ -109,6 +109,6 @@ int main() {
 
   std::cout << "c = " << b->c << std::endl;
   std::cout << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
-  print_blob(b);
+  // print_blob(b);
   verify(b);
 }
