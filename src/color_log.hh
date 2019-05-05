@@ -43,7 +43,7 @@ inline MyStringStream ProcessChooseColor() {
   return stream;
 }
 
-#if defined(NDEBUG)
+#if defined(LOGPRINT)
 #define ColorLog(x)                                                            \
   std::cerr << (static_cast<MyStringStream&>(ProcessChooseColor() << x << END) \
                     .str())

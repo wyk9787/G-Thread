@@ -12,6 +12,8 @@
 #include "log.h"
 #include "util.hh"
 
+static volatile bool first_time;
+
 // Initialize static class members
 void* StackContext::bottom_of_stack_ = nullptr;
 bool StackContext::initialized_;
@@ -52,11 +54,14 @@ StackContext::StackContext() : stack_(nullptr) {
     GetStackBottom();
     initialized_ = true;
   }
+  first_time = true;
 }
 
 NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {
   DestroyContext();
   stack_size_ = (uintptr_t)bottom_of_stack_ - (uintptr_t)top_of_stack;
+  printf("%d: stack size1: %zu, address: %p\n", getpid(), stack_size_,
+         &stack_size_);
   if (stack_ != nullptr) {
     REQUIRE(munmap(stack_, ROUND_UP(stack_size_, PAGE_SIZE)) == 0)
         << "munmap failed: " << strerror(errno);
@@ -76,12 +81,15 @@ NO_INLINE void StackContext::Phase2Save() {
   // correct return pointer without running into issues of complete_save
   // trampling the stack it is trying to save.
   // Q? : Why is there an extra function call here? Is it necessary?
+  first_time = false;
   CompleteSave(__builtin_frame_address(0));
 }
 
 NO_INLINE void StackContext::SaveContext() {
+  first_time = true;
   // First, we need to save the CPU state.
-  if (!sigsetjmp(state_, 1)) {
+  REQUIRE(getcontext(&state_) == 0) << "getcontext failed: " << strerror(errno);
+  if (first_time) {
     // NOTO: This comments make it look like this save_context will be called
     // multiple times, but only first ever return 0. It returns 0 if it didn't
     // just siglongjmp here. If setjmp returns 0, this is the first time we are
@@ -96,16 +104,21 @@ NO_INLINE void StackContext::SaveContext() {
 }
 
 void StackContext::CompleteRestore(volatile void* padding) {
+  ColorLog("Complete Restore");
+  ColorLog("stack size: " << stack_size_);
   // Restore the stack
   memcpy(reinterpret_cast<void*>(
              (reinterpret_cast<uintptr_t>(bottom_of_stack_) - stack_size_)),
          stack_, stack_size_);
   ColorLog("Before longjmp");
   // And restore the rest of the machine state
-  siglongjmp(state_, 1);
+  setcontext(&state_);
+  ColorLog("THIS IS WRONG!!");
 }
 
 void StackContext::RestoreContext() {
+  ColorLog("stack_size: " << stack_size_);
+  ColorLog("Restor Context");
   volatile void* padding = nullptr;
   // When we finally do a longjmp, we're going to rewind the stack pointer to
   // where it was previously. However, before we do that, we need to restore the
@@ -113,20 +126,31 @@ void StackContext::RestoreContext() {
   // stack space for our local variables; the function that will do the actual
   // restore needs to be running with a stack frame beyond the recorded stack
   // top. Therefore, use alloca to push us past that point.
+  ColorLog("Before if");
   if (reinterpret_cast<uintptr_t>(bottom_of_stack_) -
           reinterpret_cast<uintptr_t>(__builtin_frame_address(0)) <
       stack_size_) {
+    size_t size =
+        stack_size_ - (reinterpret_cast<uintptr_t>(bottom_of_stack_) -
+                       reinterpret_cast<uintptr_t>(__builtin_frame_address(0)));
+
+    ColorLog("bottom of stack: " << bottom_of_stack_);
+    ColorLog("bp: " << __builtin_frame_address(0));
+    ColorLog("stack_size: " << stack_size_);
+
+    ColorLog("Ready to alloca: " << size);
     padding = alloca(stack_size_ -
                      (reinterpret_cast<uintptr_t>(bottom_of_stack_) -
                       reinterpret_cast<uintptr_t>(__builtin_frame_address(0))));
   }
+  ColorLog("After if");
 
   // Pass the padding to complete restore so that it won't get optimized away.
   CompleteRestore(padding);
 
   // This is unreachable, but doing some stuff here should help prevent the call
   // to CompleteRestore from being optimized as a tail call
-  ((volatile char*)padding)[0] = 0;
+  //((volatile char*)padding)[0] = 0;
 }
 
 void StackContext::DestroyContext() {

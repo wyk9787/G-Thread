@@ -10,10 +10,20 @@
 #include "log.h"
 #include "util.hh"
 
-GThread::GThread() : tid_(getpid()), predecessor_(0), first_gthread_(false) {}
+GThread::GThread() : tid_(getpid()), predecessor_(0), first_gthread_(false) {
+  InitStackContext();
+}
 
 GThread::GThread(bool first)
-    : tid_(getpid()), predecessor_(0), first_gthread_(first) {}
+    : tid_(getpid()), predecessor_(0), first_gthread_(first) {
+  InitStackContext();
+}
+
+void GThread::InitStackContext() {
+  void *buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  context_ = new (buffer) StackContext();
+}
 
 void GThread::Create(void *(*start_routine)(void *), void *args) {
   AtomicEnd();
@@ -38,8 +48,14 @@ void GThread::Create(void *(*start_routine)(void *), void *args) {
     tid_ = getpid();
 
     AtomicBegin();
+    if (!first_gthread_) {
+      ColorLog("After Atomic Begin()");
+    }
     // Execute thread function
     retval_ = start_routine(args);
+    if (!first_gthread_) {
+      ColorLog("stack size2: " << context_->stack_size_);
+    }
     AtomicEnd();
 
     exit(0);
@@ -54,7 +70,7 @@ void GThread::AtomicBegin() {
   }
 
   // Save the context
-  context_.SaveContext();
+  context_->SaveContext();
 
   // Clear the local version mappings
   Gstm::read_set_version->clear();
@@ -70,6 +86,9 @@ void GThread::AtomicBegin() {
   // Turn off all permission on the local heap
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)
       << "mprotect failed: " << strerror(errno);
+  if (!first_gthread_) {
+    ColorLog("stack size1: " << context_->stack_size_);
+  }
 
   return;
 }
@@ -77,6 +96,7 @@ void GThread::AtomicBegin() {
 void GThread::AtomicEnd() {
   if (!first_gthread_) {
     ColorLog("<a.end>");
+    ColorLog("stack size3: " << context_->stack_size_);
   }
   if (!AtomicCommit()) {
     AtomicAbort();
@@ -121,7 +141,7 @@ void GThread::AtomicAbort() {
   // Throw away changes
   REQUIRE(madvise(local_heap, HEAP_SIZE, MADV_DONTNEED) == 0)
       << "madvise failed: " << strerror(errno);
-  context_.RestoreContext();
+  context_->RestoreContext();
 }
 
 void GThread::Join() {

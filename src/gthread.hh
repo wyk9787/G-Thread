@@ -36,13 +36,14 @@ class GThread {
   // Commit an atomic section
   bool AtomicCommit();
 
-  jmp_buf env_;  // context
+  void InitStackContext();
+
   pid_t tid_;
-  pid_t predecessor_;     // its child pid
-  void *retval_;          // return value from the function
-  void *local_heap_;      // Local view of the global heap
-  StackContext context_;  // stack context
+  pid_t predecessor_;  // its child pid
+  void *retval_;       // return value from the function
+  void *local_heap_;   // Local view of the global heap
   bool first_gthread_;
+  StackContext *context_;  // stack context
 };
 
 #endif  // GTHREAD_HH_

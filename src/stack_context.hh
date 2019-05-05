@@ -1,8 +1,9 @@
 #ifndef STACKCONTEXT_
 #define STACKCONTEXT_
 
-#include <setjmp.h>
+//#include <setjmp.h>
 #include <stdlib.h>
+#include <ucontext.h>
 
 #define NO_INLINE __attribute__((noinline))
 
@@ -15,6 +16,8 @@ class StackContext {
   void SaveContext();
   void RestoreContext();
 
+  size_t stack_size_;
+
  private:
   void CompleteSave(void* top_of_stack);
   void Phase2Save();
@@ -22,9 +25,9 @@ class StackContext {
   void GetStackBottom();
   void DestroyContext();
 
-  sigjmp_buf state_;
+  // jmp_buf state_;
+  ucontext_t state_;
   void* stack_;
-  size_t stack_size_;
 
   static bool initialized_;
   static void* bottom_of_stack_;

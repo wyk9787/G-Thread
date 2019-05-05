@@ -159,8 +159,10 @@ void Gstm::WaitExited(pid_t predecessor) {
     return;
   }
   int status;
+  ColorLog("<wait>\t\tpid: " << predecessor);
   REQUIRE(waitpid(predecessor, &status, 0) == predecessor)
       << "waitpid failed: " << strerror(errno);
+  ColorLog("<wait.S>\t\tpid: " << predecessor);
 }
 
 bool Gstm::IsHeapConsistent() {
