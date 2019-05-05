@@ -5,12 +5,13 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 500
+#define THREAD_NUM 2
+#define SECONDARY_THREAD_NUM 1
 
-#define A_SIZE 800
-#define B_SIZE 1000
+#define A_SIZE 10
+#define B_SIZE 5
 
-//#define DOUBLE
+#define DOUBLE
 
 // Forward declaration
 void *fn1(void *);
@@ -48,12 +49,12 @@ void *fn1(void *arg) {
   ColorLog("c1 = " << b->c);
 
 #if defined(DOUBLE)
-  GThread threads[THREAD_NUM];
+  GThread threads[SECONDARY_THREAD_NUM];
 
-  for (int i = 0; i < THREAD_NUM; i++) {
+  for (int i = 0; i < SECONDARY_THREAD_NUM; i++) {
     threads[i].Create(fn2, b);
   }
-  for (int i = 0; i < THREAD_NUM; i++) {
+  for (int i = 0; i < SECONDARY_THREAD_NUM; i++) {
     threads[i].Join();
   }
 #endif
@@ -64,7 +65,7 @@ void *fn1(void *arg) {
 
 void verify(blob_t *b) {
 #if defined(DOUBLE)
-  int expected = (THREAD_NUM + 1) * THREAD_NUM;
+  int expected = THREAD_NUM * (SECONDARY_THREAD_NUM + 1);
 #else
   int expected = THREAD_NUM;
 #endif

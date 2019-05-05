@@ -48,15 +48,19 @@ void StackContext::GetStackBottom() {
 }
 
 StackContext::StackContext() : stack_(nullptr) {
-  if (!initialized_) {
-    GetStackBottom();
-    initialized_ = true;
-  }
+  // if (!initialized_) {
+  GetStackBottom();
+  // initialized_ = true;
+  //}
 }
 
 NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {
   DestroyContext();
   stack_size_ = (uintptr_t)bottom_of_stack_ - (uintptr_t)top_of_stack;
+  if (stack_ != nullptr) {
+    REQUIRE(munmap(stack_, ROUND_UP(stack_size_, PAGE_SIZE)) == 0)
+        << "munmap failed: " << strerror(errno);
+  }
   stack_ = mmap(NULL, ROUND_UP(stack_size_, PAGE_SIZE), PROT_READ | PROT_WRITE,
                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);

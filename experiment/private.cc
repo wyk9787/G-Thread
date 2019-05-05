@@ -56,17 +56,14 @@ int main() {
     wait(&status);
     ColorLog("Parent: b = " << *b);
     ColorLog("Parent: a = " << *a);
-  } else {
-    sleep(2);
-    int *a = (int *)local_heap;
-    int *b = (int *)share_heap;
-    ColorLog("Child: b = " << *b);
-    ColorLog("Child: a = " << *a);
     munmap(local_heap, HEAP_SIZE);
     local_heap = mmap(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_FIXED, shm_fd, 0);
-    ColorLog("Child: b = " << *b);
-    ColorLog("Child: a = " << *a);
-    //*a = 120;
+    ColorLog("Parent: b = " << *b);
+    ColorLog("Parent: a = " << *a);
+  } else {
+    sleep(2);
+    ColorLog("Child: b = " << *(int *)local_heap);
+    ColorLog("Child: a = " << *(int *)share_heap);
   }
 }
