@@ -6,7 +6,7 @@
 #include "log.h"
 
 #define THREAD_NUM 2
-#define SECONDARY_THREAD_NUM 1
+#define SECONDARY_THREAD_NUM 2
 
 #define A_SIZE 10
 #define B_SIZE 15

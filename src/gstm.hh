@@ -45,6 +45,7 @@ class Gstm {
   static private_mapping_t* read_set_version;
   static private_mapping_t* write_set_version;
 
+  static private_mapping_t* local_page_version;
   static share_mapping_t*
       global_page_version;  // A global process-shared page version mapping
 

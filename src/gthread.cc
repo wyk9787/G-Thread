@@ -59,6 +59,13 @@ void GThread::AtomicBegin() {
   // Clear the local version mappings
   Gstm::read_set_version->clear();
   Gstm::write_set_version->clear();
+  Gstm::local_page_version->clear();
+
+  pthread_mutex_lock(Gstm::mutex);
+  for (const auto &p : *Gstm::global_page_version) {
+    Gstm::local_page_version->insert(p);
+  }
+  pthread_mutex_unlock(Gstm::mutex);
 
   // Turn off all permission on the local heap
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)

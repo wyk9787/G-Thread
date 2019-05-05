@@ -15,6 +15,7 @@
 pthread_mutex_t* Gstm::mutex = nullptr;
 Gstm::private_mapping_t* Gstm::read_set_version;
 Gstm::private_mapping_t* Gstm::write_set_version;
+Gstm::private_mapping_t* Gstm::local_page_version;
 Gstm::share_mapping_t* Gstm::global_page_version = nullptr;
 size_t* Gstm::rollback_count_ = nullptr;
 void* Gstm::global_page_version_buffer = nullptr;
@@ -45,6 +46,9 @@ void Gstm::InitMapping() {
   buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   write_set_version = new (buffer) private_mapping_t();
+  buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  local_page_version = new (buffer) private_mapping_t();
 
   // Shared mapping
   global_page_version_buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
@@ -83,8 +87,8 @@ void Gstm::SetupInterProcessMutex() {
 
 void Gstm::HandleReads(void* page) {
   size_t version_num = 0;
-  if (global_page_version->find(page) != global_page_version->end()) {
-    version_num = global_page_version->at(page);
+  if (local_page_version->find(page) != local_page_version->end()) {
+    version_num = local_page_version->at(page);
   }
   ColorLog("<read>\t\t" << page << " version: " << version_num);
 
@@ -95,8 +99,8 @@ void Gstm::HandleReads(void* page) {
 
 void Gstm::HandleWrites(void* page) {
   size_t version_num = 1;
-  if (global_page_version->find(page) != global_page_version->end()) {
-    version_num = global_page_version->at(page) + 1;
+  if (local_page_version->find(page) != local_page_version->end()) {
+    version_num = local_page_version->at(page) + 1;
   }
 
   ColorLog("<write>\t\t" << page << " version: " << version_num);
@@ -195,6 +199,8 @@ void Gstm::CommitHeap() {
   // backing file
   REQUIRE(msync(global_heap, HEAP_SIZE, MS_SYNC) == 0)
       << "msync failed: " << strerror(errno);
+  ColorLog("<msync.S>");
+  UpdateHeap();
 }
 
 void Gstm::Finalize() {
