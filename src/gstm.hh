@@ -38,6 +38,8 @@ class Gstm {
   static void SetupInterProcessMutex();
   static void InitMapping();
 
+  static void UpdateHeap();
+
   static pthread_mutex_t*
       mutex;  // A cross-process mutex that synchronizes the commit stage
   static private_mapping_t* read_set_version;

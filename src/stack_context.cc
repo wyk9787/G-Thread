@@ -48,10 +48,10 @@ void StackContext::GetStackBottom() {
 }
 
 StackContext::StackContext() : stack_(nullptr) {
-  // if (!initialized_) {
-  GetStackBottom();
-  // initialized_ = true;
-  //}
+  if (!initialized_) {
+    GetStackBottom();
+    initialized_ = true;
+  }
 }
 
 NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {

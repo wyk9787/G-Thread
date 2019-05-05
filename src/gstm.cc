@@ -191,6 +191,10 @@ void Gstm::CommitHeap() {
     (*global_page_version)[p.first] = p.second;
     ColorLog("<commit>\t\t" << p.first << " version: " << p.second);
   }
+  // Make sure the updates to the share mapping is actually synced to the
+  // backing file
+  REQUIRE(msync(global_heap, HEAP_SIZE, MS_SYNC) == 0)
+      << "msync failed: " << strerror(errno);
 }
 
 void Gstm::Finalize() {
@@ -208,4 +212,16 @@ void Gstm::Finalize() {
   //<< "munmap failed: " << strerror(errno);
   // REQUIRE(munmap(rollback_count_buffer, PAGE_SIZE) == 0)
   //<< "munmap failed: " << strerror(errno);
+}
+
+void Gstm::UpdateHeap() {
+  // Unmap and map again at the beginning of the local heap to make sure the
+  // local heap represent the latest view of the file THIS IS IMPORTANT since
+  // whenther MAP_PRIVATE will reflect the latest state of the backed file is
+  // unspecified and from experiment, it doesn't do that on Linux.
+  REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
+      << "munmap failed: " << strerror(errno);
+  void* tmp = mmap(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_FIXED, shm_fd, 0);
+  REQUIRE(tmp == local_heap) << "mmap failed: " << strerror(errno);
 }

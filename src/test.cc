@@ -9,7 +9,7 @@
 #define SECONDARY_THREAD_NUM 1
 
 #define A_SIZE 10
-#define B_SIZE 5
+#define B_SIZE 15
 
 #define DOUBLE
 

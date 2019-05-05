@@ -60,16 +60,6 @@ void GThread::AtomicBegin() {
   Gstm::read_set_version->clear();
   Gstm::write_set_version->clear();
 
-  // Unmap and map again at the beginning of the local heap to make sure the
-  // local heap represent the latest view of the file THIS IS IMPORTANT since
-  // whenther MAP_PRIVATE will reflect the latest state of the backed file is
-  // unspecified and from experiment, it doesn't do that on Linux.
-  REQUIRE(munmap(local_heap, HEAP_SIZE) == 0)
-      << "munmap failed: " << strerror(errno);
-  void *tmp = mmap(local_heap, HEAP_SIZE, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_FIXED, shm_fd, 0);
-  REQUIRE(tmp == local_heap) << "mmap failed: " << strerror(errno);
-
   // Turn off all permission on the local heap
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)
       << "mprotect failed: " << strerror(errno);
@@ -94,6 +84,7 @@ bool GThread::AtomicCommit() {
     if (!first_gthread_) {
       ColorLog("<com.S>\t\tNo read & write");
     }
+    Gstm::UpdateHeap();
     return true;
   }
 
@@ -120,6 +111,9 @@ bool GThread::AtomicCommit() {
 
 void GThread::AtomicAbort() {
   ColorLog("<ROLLLLLLLLLL BACK!>");
+  // Throw away changes
+  REQUIRE(madvise(local_heap, HEAP_SIZE, MADV_DONTNEED) == 0)
+      << "madvise failed: " << strerror(errno);
   context_.RestoreContext();
 }
 
