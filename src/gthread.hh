@@ -26,13 +26,13 @@ class GThread {
   // Begins an atomic section
   static void AtomicBegin();
 
-  static void InitGThread();
-  static bool first_gthread_;
-
- private:
   // Ends an atomic section
   static void AtomicEnd();
 
+  static void InitGThread();
+  static void print_map(int i);
+
+ private:
   // Abort and rollbakc an atomic section
   static void AtomicAbort();
 

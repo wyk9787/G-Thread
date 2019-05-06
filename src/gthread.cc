@@ -12,11 +12,9 @@
 // Initialize static variables
 pid_t GThread::tid_ = 0;
 pid_t GThread::predecessor_ = 0;
-bool GThread::first_gthread_;
 StackContext GThread::context_;
 
 void GThread::InitGThread() {
-  first_gthread_ = true;
   tid_ = getpid();
   Gstm::Initialize();
   context_.InitStackContext();
@@ -35,9 +33,7 @@ void GThread::Create(gthread_t *t, void *(*start_routine)(void *), void *args) {
     // Parent process
     t->tid = child_pid;
     predecessor_ = child_pid;
-    if (!first_gthread_) {
-      ColorLog("<fork>\t\tchild pid: " << child_pid);
-    }
+    ColorLog("<fork>\t\tchild pid: " << child_pid);
     AtomicBegin();
     return;
   } else {
@@ -56,10 +52,17 @@ void GThread::Create(gthread_t *t, void *(*start_routine)(void *), void *args) {
   }
 }
 
+void GThread::print_map(int i) {
+  // std::cerr << "No. " << i << std::endl;
+  // std::cerr << "---------------------START--------------------" << std::endl;
+  // for (const auto &p : *Gstm::local_page_version) {
+  // std::cerr << p.first << ": " << p.second << std::endl;
+  //}
+  // std::cerr << "---------------------END--------------------" << std::endl;
+}
+
 void GThread::AtomicBegin() {
-  if (!first_gthread_) {
-    ColorLog("<a.beg>");
-  }
+  ColorLog("<a.beg>");
 
   // Save the context
   context_.SaveContext();
@@ -67,28 +70,37 @@ void GThread::AtomicBegin() {
   // Clear the local version mappings
   Gstm::read_set_version->clear();
   Gstm::write_set_version->clear();
+
+  print_map(0);
   Gstm::local_page_version->clear();
 
+  // std::cerr << "---------------------START--------------------" << std::endl;
   pthread_mutex_lock(Gstm::mutex);
   for (const auto &p : *Gstm::global_page_version) {
     Gstm::local_page_version->insert(p);
+    // std::cerr << getpid() << ": " << p.first << ": " << p.second <<
+    // std::endl;
   }
   pthread_mutex_unlock(Gstm::mutex);
+  // std::cerr << "---------------------END--------------------" << std::endl;
 
   // Turn off all permission on the local heap
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)
       << "mprotect failed: " << strerror(errno);
 
+  print_map(1);
+
   return;
 }
 
 void GThread::AtomicEnd() {
-  if (!first_gthread_) {
-    ColorLog("<a.end>");
-  }
+  print_map(2);
+  ColorLog("<a.end>");
   if (!AtomicCommit()) {
+    print_map(3);
     AtomicAbort();
   }
+  print_map(4);
 }
 
 bool GThread::AtomicCommit() {
@@ -96,9 +108,7 @@ bool GThread::AtomicCommit() {
   // we don't have to wait or commitUpdate local view of memory and return
   // true
   if (Gstm::read_set_version->empty() && Gstm::write_set_version->empty()) {
-    if (!first_gthread_) {
-      ColorLog("<com.S>\t\tNo read & write");
-    }
+    ColorLog("<com.S>\t\tNo read & write");
     Gstm::UpdateHeap();
     return true;
   }
@@ -134,6 +144,8 @@ void GThread::AtomicAbort() {
 
 void GThread::Join(gthread_t t) {
   AtomicEnd();
+  print_map(5);
   Gstm::WaitExited(t.tid);
+  print_map(6);
   AtomicBegin();
 }

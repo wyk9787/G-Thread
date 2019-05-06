@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 
 #include "color_log.hh"
+#include "gthread.hh"
 #include "log.h"
 #include "util.hh"
 
@@ -58,22 +59,26 @@ void StackContext::InitStackContext() {
 }
 
 NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {
-  DestroyContext();
+  GThread::print_map(81);
+  // DestroyContext();
+  GThread::print_map(82);
   stack_size_ = (uintptr_t)bottom_of_stack_ - (uintptr_t)top_of_stack;
-  if (stack_ != nullptr) {
-    REQUIRE(munmap(stack_, ROUND_UP(stack_size_, PAGE_SIZE)) == 0)
-        << "munmap failed: " << strerror(errno);
-  }
+  // if (stack_ != nullptr) {
+  // REQUIRE(munmap(stack_, ROUND_UP(stack_size_, PAGE_SIZE)) == 0)
+  //<< "munmap failed: " << strerror(errno);
+  //}
   stack_ = mmap(NULL, ROUND_UP(stack_size_, PAGE_SIZE), PROT_READ | PROT_WRITE,
                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (stack_ == MAP_FAILED) {
     perror("mmap");
-    exit(1);
+    _exit(1);
   }
   // REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
+  GThread::print_map(9);
 
   memset(stack_, ROUND_UP(stack_size_, PAGE_SIZE), 0);
   memcpy(stack_, top_of_stack, stack_size_);
+  GThread::print_map(10);
 }
 
 NO_INLINE void StackContext::Phase2Save() {
@@ -83,6 +88,7 @@ NO_INLINE void StackContext::Phase2Save() {
   // correct return pointer without running into issues of complete_save
   // trampling the stack it is trying to save.
   // Q? : Why is there an extra function call here? Is it necessary?
+  GThread::print_map(8);
   first_time = false;
   CompleteSave(__builtin_frame_address(0));
 }
@@ -91,6 +97,7 @@ NO_INLINE void StackContext::SaveContext() {
   first_time = true;
   // First, we need to save the CPU state.
   REQUIRE(getcontext(&state_) == 0) << "getcontext failed: " << strerror(errno);
+  GThread::print_map(7);
   if (first_time) {
     // NOTO: This comments make it look like this save_context will be called
     // multiple times, but only first ever return 0. It returns 0 if it didn't
@@ -100,6 +107,7 @@ NO_INLINE void StackContext::SaveContext() {
     // more sure that we aren't messing around in the very part of the stack
     // that we are trying to save.
     Phase2Save();
+    GThread::print_map(11);
   } else {
     ColorLog("<Rollback.S>");
   }

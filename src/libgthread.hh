@@ -7,48 +7,47 @@
 #include "gstm.hh"
 #include "gthread.hh"
 
+typedef int (*main_fn_t)(int argc, char** argv, char** env);
 extern "C" int __libc_start_main(main_fn_t main_fn, int argc, char** argv,
                                  void (*init)(), void (*fini)(),
                                  void (*rtld_fini)(), void* stack_end);
 
-static decltype(__libc_start_main)* real_libc_start_main;
+static main_fn_t real_main;
 
-struct LibcStartMainArgs {
-  main_fn_t main_fn;
+struct MainArgs {
   int argc;
   char** argv;
-  void (*init)();
-  void (*fini)();
-  void (*rtld_fini)();
-  void* stack_end;
+  char** env;
 };
 
 void* program(void* arg) {
-  LibcStartMainArgs* a = static_cast<LibcStartMainArgs*>(arg);
-  GThread::first_gthread_ = false;
-  int result = real_libc_start_main(a->main_fn, a->argc, a->argv, a->init,
-                                    a->fini, a->rtld_fini, a->stack_end);
-  return nullptr;
+  MainArgs* a = (MainArgs*)arg;
+  real_main(a->argc, a->argv, a->env);
+  GThread::AtomicEnd();
+  _exit(0);
+}
+
+int wrapped_main(int argc, char** argv, char** env) {
+  MainArgs arg = {.argc = argc, .argv = argv, .env = env};
+  GThread::InitGThread();
+  gthread_t t;
+  GThread::AtomicBegin();
+  GThread::Create(&t, program, &arg);
+  GThread::Join(t);
+  GThread::AtomicEnd();
+  _exit(0);
 }
 
 extern "C" int __libc_start_main(main_fn_t main_fn, int argc, char** argv,
                                  void (*init)(), void (*fini)(),
                                  void (*rtld_fini)(), void* stack_end) {
-  GThread::InitGThread();
-  real_libc_start_main = reinterpret_cast<decltype(__libc_start_main)*>(
+  GlobalHeapInit();
+  auto real_libc_start_main = reinterpret_cast<decltype(__libc_start_main)*>(
       dlsym(RTLD_NEXT, "__libc_start_main"));
-  LibcStartMainArgs a = {.main_fn = main_fn,
-                         .argc = argc,
-                         .argv = argv,
-                         .init = init,
-                         .fini = fini,
-                         .rtld_fini = rtld_fini,
-                         .stack_end = stack_end};
-  gthread_t t;
-  GThread::AtomicBegin();
-  GThread::Create(&t, program, &a);
-  GThread::Join(t);
-  return 0;
+  real_main = main_fn;
+  int result = real_libc_start_main(wrapped_main, argc, argv, init, fini,
+                                    rtld_fini, stack_end);
+  return result;
 }
 
 __attribute__((destructor)) void fini() {

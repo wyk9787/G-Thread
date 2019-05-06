@@ -23,8 +23,6 @@ void* Gstm::global_page_version_buffer = nullptr;
 void* Gstm::rollback_count_buffer = nullptr;
 
 void Gstm::Initialize() {
-  GlobalHeapInit();
-
   // Set up segfault handler
   struct sigaction sa;
   memset(&sa, 0, sizeof(struct sigaction));
@@ -44,11 +42,16 @@ void Gstm::InitMapping() {
   void* buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   read_set_version = new (buffer) private_mapping_t();
+  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
+
   buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
   write_set_version = new (buffer) private_mapping_t();
+
   buffer = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  REQUIRE(buffer != MAP_FAILED) << "mmap failed: " << strerror(errno);
   local_page_version = new (buffer) private_mapping_t();
 
   // Shared mapping
@@ -159,16 +162,13 @@ void Gstm::WaitExited(pid_t predecessor) {
     return;
   }
   int status;
-  if (!GThread::first_gthread_) {
-    ColorLog("<wait>\t\tpid: " << predecessor);
-  }
   int ret = waitpid(predecessor, &status, 0);
-  if (ret != predecessor) {
-    ColorLog("wait on " << predecessor << " failed: " << strerror(errno));
-    exit(1);
-  }
-  if (!GThread::first_gthread_) {
-    ColorLog("<wait.S>\t\tpid: " << predecessor);
+
+  // It is possible this process has already used join to collect its immediate
+  // child
+  if (ret != predecessor && errno != ECHILD) {
+    ColorLog("Wait for processor " << predecessor
+                                   << " failed: " << strerror(errno));
   }
 }
 
