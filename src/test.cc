@@ -6,13 +6,13 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 500
-#define SECONDARY_THREAD_NUM 50
+#define THREAD_NUM 10
+#define SECONDARY_THREAD_NUM 10
 
 #define A_SIZE 1000
 #define B_SIZE 1500
 
-//#define DOUBLE
+#define DOUBLE
 
 // Forward declaration
 void *fn1(void *);
