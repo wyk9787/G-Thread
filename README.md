@@ -1,4 +1,4 @@
-# G-THREAD
+# G-Thread
 
 G-Thread is a safe multithreaded programming interface for C++
 based on optimistic concurrency control, or more specifically, software transactional memory(STM). 
