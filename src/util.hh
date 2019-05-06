@@ -21,7 +21,7 @@
 #define PAGE_SIZE 0x1000
 #define MIN_ALIGNED_SIZE 16
 
-#define LOGPRINT
+//#define LOGPRINT
 
 extern int shm_fd;         // File descriptor for shared memory object
 extern void* local_heap;   // Local view of the state

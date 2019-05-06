@@ -6,13 +6,13 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 100
-#define SECONDARY_THREAD_NUM 100
+#define THREAD_NUM 500
+#define SECONDARY_THREAD_NUM 50
 
 #define A_SIZE 1000
 #define B_SIZE 1500
 
-#define DOUBLE
+//#define DOUBLE
 
 // Forward declaration
 void *fn1(void *);
@@ -46,6 +46,15 @@ void *fn1(void *arg) {
     b->b[i] = b->b[i] + 1;
   }
   b->c = b->c + 1;
+  int *a = (int *)malloc(sizeof(int) * 10);
+  for (int i = 0; i < 10; i++) {
+    a[i] = i;
+  }
+  printf("a = ");
+  for (int i = 0; i < 10; i++) {
+    printf(" %d", a[i]);
+  }
+  printf("\n");
 
 #if defined(DOUBLE)
   gthread_t threads[SECONDARY_THREAD_NUM];
