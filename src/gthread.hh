@@ -6,44 +6,44 @@
 #include <unordered_set>
 
 #include "stack_context.hh"
+#include "util.hh"
+
+struct gthread_t {
+  pid_t tid;
+  void *retval;
+};
 
 // Possibly change to template in the future
 class GThread {
  public:
-  GThread();
-  GThread(bool first);
-
-  // static GThread *GetInstance();
+  GThread() = delete;
 
   // Possibly change to use Functional interface in the future
-  void Create(void *(*start_routine)(void *), void *args);
+  static void Create(gthread_t *t, void *(*start_routine)(void *), void *args);
 
-  void Join();
-
-  pid_t GetTid() { return tid_; }
-  void *GetRetVal() { return retval_; }
+  static void Join(gthread_t t);
 
   // Begins an atomic section
-  void AtomicBegin();
+  static void AtomicBegin();
+
+  static void InitGThread();
+  static bool first_gthread_;
 
  private:
   // Ends an atomic section
-  void AtomicEnd();
+  static void AtomicEnd();
 
   // Abort and rollbakc an atomic section
-  void AtomicAbort();
+  static void AtomicAbort();
 
   // Commit an atomic section
-  bool AtomicCommit();
+  static bool AtomicCommit();
 
-  void InitStackContext();
+  static void InitStackContext();
 
-  pid_t tid_;
-  pid_t predecessor_;  // its child pid
-  void *retval_;       // return value from the function
-  void *local_heap_;   // Local view of the global heap
-  bool first_gthread_;
-  StackContext *context_;  // stack context
+  static pid_t tid_;
+  static pid_t predecessor_;     // its child pid
+  static StackContext context_;  // stack context
 };
 
 #endif  // GTHREAD_HH_

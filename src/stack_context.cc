@@ -12,11 +12,13 @@
 #include "log.h"
 #include "util.hh"
 
+// Keep track of whether we called getcontext directly or we returned from the
+// setcontext
 static volatile bool first_time;
 
 // Initialize static class members
 void* StackContext::bottom_of_stack_ = nullptr;
-bool StackContext::initialized_;
+bool StackContext::initialized_ = false;
 
 void StackContext::GetStackBottom() {
   // Here we figure out the bottom of the stack, which should be completely
@@ -49,26 +51,26 @@ void StackContext::GetStackBottom() {
   bottom_of_stack_ = end;
 }
 
-StackContext::StackContext() : stack_(nullptr) {
-  if (!initialized_) {
-    GetStackBottom();
-    initialized_ = true;
-  }
+void StackContext::InitStackContext() {
+  GetStackBottom();
+  stack_ = nullptr;
   first_time = true;
 }
 
 NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {
   DestroyContext();
   stack_size_ = (uintptr_t)bottom_of_stack_ - (uintptr_t)top_of_stack;
-  printf("%d: stack size1: %zu, address: %p\n", getpid(), stack_size_,
-         &stack_size_);
   if (stack_ != nullptr) {
     REQUIRE(munmap(stack_, ROUND_UP(stack_size_, PAGE_SIZE)) == 0)
         << "munmap failed: " << strerror(errno);
   }
   stack_ = mmap(NULL, ROUND_UP(stack_size_, PAGE_SIZE), PROT_READ | PROT_WRITE,
                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
+  if (stack_ == MAP_FAILED) {
+    perror("mmap");
+    exit(1);
+  }
+  // REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
 
   memset(stack_, ROUND_UP(stack_size_, PAGE_SIZE), 0);
   memcpy(stack_, top_of_stack, stack_size_);
@@ -104,16 +106,12 @@ NO_INLINE void StackContext::SaveContext() {
 }
 
 void StackContext::CompleteRestore(volatile void* padding) {
-  ColorLog("Complete Restore");
-  ColorLog("stack size: " << stack_size_);
   // Restore the stack
   memcpy(reinterpret_cast<void*>(
              (reinterpret_cast<uintptr_t>(bottom_of_stack_) - stack_size_)),
          stack_, stack_size_);
-  ColorLog("Before longjmp");
   // And restore the rest of the machine state
   setcontext(&state_);
-  ColorLog("THIS IS WRONG!!");
 }
 
 void StackContext::RestoreContext() {
@@ -126,7 +124,6 @@ void StackContext::RestoreContext() {
   // stack space for our local variables; the function that will do the actual
   // restore needs to be running with a stack frame beyond the recorded stack
   // top. Therefore, use alloca to push us past that point.
-  ColorLog("Before if");
   if (reinterpret_cast<uintptr_t>(bottom_of_stack_) -
           reinterpret_cast<uintptr_t>(__builtin_frame_address(0)) <
       stack_size_) {
@@ -134,16 +131,10 @@ void StackContext::RestoreContext() {
         stack_size_ - (reinterpret_cast<uintptr_t>(bottom_of_stack_) -
                        reinterpret_cast<uintptr_t>(__builtin_frame_address(0)));
 
-    ColorLog("bottom of stack: " << bottom_of_stack_);
-    ColorLog("bp: " << __builtin_frame_address(0));
-    ColorLog("stack_size: " << stack_size_);
-
-    ColorLog("Ready to alloca: " << size);
     padding = alloca(stack_size_ -
                      (reinterpret_cast<uintptr_t>(bottom_of_stack_) -
                       reinterpret_cast<uintptr_t>(__builtin_frame_address(0))));
   }
-  ColorLog("After if");
 
   // Pass the padding to complete restore so that it won't get optimized away.
   CompleteRestore(padding);

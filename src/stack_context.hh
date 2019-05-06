@@ -10,8 +10,10 @@
 // Adapted from Johnson Sadun's stacky_context.{c/h}
 class StackContext {
  public:
-  StackContext();
+  StackContext() = default;
   ~StackContext() { DestroyContext(); }
+
+  void InitStackContext();
 
   void SaveContext();
   void RestoreContext();

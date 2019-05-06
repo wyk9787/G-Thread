@@ -7,7 +7,6 @@
 #include "gstm.hh"
 #include "gthread.hh"
 
-typedef int (*main_fn_t)(int argc, char** argv, char** env);
 extern "C" int __libc_start_main(main_fn_t main_fn, int argc, char** argv,
                                  void (*init)(), void (*fini)(),
                                  void (*rtld_fini)(), void* stack_end);
@@ -26,6 +25,7 @@ struct LibcStartMainArgs {
 
 void* program(void* arg) {
   LibcStartMainArgs* a = static_cast<LibcStartMainArgs*>(arg);
+  GThread::first_gthread_ = false;
   int result = real_libc_start_main(a->main_fn, a->argc, a->argv, a->init,
                                     a->fini, a->rtld_fini, a->stack_end);
   return nullptr;
@@ -34,7 +34,7 @@ void* program(void* arg) {
 extern "C" int __libc_start_main(main_fn_t main_fn, int argc, char** argv,
                                  void (*init)(), void (*fini)(),
                                  void (*rtld_fini)(), void* stack_end) {
-  Gstm::Initialize();
+  GThread::InitGThread();
   real_libc_start_main = reinterpret_cast<decltype(__libc_start_main)*>(
       dlsym(RTLD_NEXT, "__libc_start_main"));
   LibcStartMainArgs a = {.main_fn = main_fn,
@@ -44,10 +44,10 @@ extern "C" int __libc_start_main(main_fn_t main_fn, int argc, char** argv,
                          .fini = fini,
                          .rtld_fini = rtld_fini,
                          .stack_end = stack_end};
-  GThread t(true);
-  t.AtomicBegin();
-  t.Create(program, &a);
-  t.Join();
+  gthread_t t;
+  GThread::AtomicBegin();
+  GThread::Create(&t, program, &a);
+  GThread::Join(t);
   return 0;
 }
 

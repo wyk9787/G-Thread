@@ -1,12 +1,13 @@
 #include <assert.h>
+#include <stdio.h>
 #include <iostream>
 
 #include "color_log.hh"
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 2
-#define SECONDARY_THREAD_NUM 1
+#define THREAD_NUM 20
+#define SECONDARY_THREAD_NUM 20
 
 #define A_SIZE 10
 #define B_SIZE 15
@@ -49,16 +50,14 @@ void *fn1(void *arg) {
   ColorLog("c1 = " << b->c);
 
 #if defined(DOUBLE)
-  GThread threads[SECONDARY_THREAD_NUM];
-
+  gthread_t threads[SECONDARY_THREAD_NUM];
   for (int i = 0; i < SECONDARY_THREAD_NUM; i++) {
-    threads[i].Create(fn2, b);
+    GThread::Create(&threads[i], fn2, b);
   }
   for (int i = 0; i < SECONDARY_THREAD_NUM; i++) {
-    threads[i].Join();
+    GThread::Join(threads[i]);
   }
 #endif
-  ColorLog("c3 = " << b->c);
 
   return nullptr;
 }
@@ -96,20 +95,20 @@ void print_blob(blob_t *b) {
 }
 
 int main() {
-  GThread threads[THREAD_NUM];
-
+  gthread_t threads[THREAD_NUM];
   blob_t *b = (blob_t *)malloc(sizeof(blob_t));
   memset(b, 0, sizeof(blob_t));
 
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Create(fn1, b);
+    GThread::Create(&threads[i], fn1, b);
   }
   for (int i = 0; i < THREAD_NUM; i++) {
-    threads[i].Join();
+    GThread::Join(threads[i]);
   }
 
+  verify(b);
+  // printf("hahahahahaha\n");
   std::cout << "c = " << b->c << std::endl;
   std::cout << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
   // print_blob(b);
-  verify(b);
 }

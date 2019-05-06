@@ -22,13 +22,15 @@
 #define SET_JPM_MAGIC 117
 #define MIN_ALIGNED_SIZE 16
 
-#define LOGPRINT
+//#define LOGPRINT
 
 extern int shm_fd;         // File descriptor for shared memory object
-extern void *local_heap;   // Local view of the state
-extern void *global_heap;  // Latest committed state of the global_heap
+extern void* local_heap;   // Local view of the state
+extern void* global_heap;  // Latest committed state of the global_heap
 
 void GlobalHeapInit();
 void LocalHeapInit();
+
+typedef int (*main_fn_t)(int argc, char** argv, char** env);
 
 #endif  // UTIL_HH_

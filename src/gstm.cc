@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "color_log.hh"
+#include "gthread.hh"
 #include "log.h"
 #include "util.hh"
 
@@ -122,7 +123,7 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
       (uintptr_t)page > ((uintptr_t)local_heap) + HEAP_SIZE) {
     // ColorLog("REAL segfault at " << addr);
     char buffer[20];
-    sprintf(buffer, "%d: REAL SEGFAULT\n", getpid());
+    sprintf(buffer, "%d: REAL SEGFAULT at %p\n", getpid(), addr);
     fputs(buffer, stderr);
 
     // Use _exit() instead of exit() since exit() is not safe in segfault
@@ -154,15 +155,21 @@ void Gstm::SegfaultHandler(int signal, siginfo_t* info, void* ctx) {
 }
 
 void Gstm::WaitExited(pid_t predecessor) {
-  // This is the first process. There is no predecessor
   if (predecessor == 0) {
     return;
   }
   int status;
-  ColorLog("<wait>\t\tpid: " << predecessor);
-  REQUIRE(waitpid(predecessor, &status, 0) == predecessor)
-      << "waitpid failed: " << strerror(errno);
-  ColorLog("<wait.S>\t\tpid: " << predecessor);
+  if (!GThread::first_gthread_) {
+    ColorLog("<wait>\t\tpid: " << predecessor);
+  }
+  int ret = waitpid(predecessor, &status, 0);
+  if (ret != predecessor) {
+    ColorLog("wait on " << predecessor << " failed: " << strerror(errno));
+    exit(1);
+  }
+  if (!GThread::first_gthread_) {
+    ColorLog("<wait.S>\t\tpid: " << predecessor);
+  }
 }
 
 bool Gstm::IsHeapConsistent() {

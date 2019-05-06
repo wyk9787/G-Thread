@@ -14,6 +14,7 @@ class Gstm {
   friend class GThread;
 
  public:
+  Gstm() = delete;
   using share_mapping_t =
       std::unordered_map<void*, size_t, std::hash<void*>, std::equal_to<void*>,
                          ShareAllocator<std::pair<void*, size_t>>>;
