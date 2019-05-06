@@ -50,7 +50,7 @@ void GThread::Create(gthread_t *t, void *(*start_routine)(void *), void *args) {
     start_routine(args);
     AtomicEnd();
 
-    exit(0);
+    _exit(0);
 
     return;
   }

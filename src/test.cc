@@ -6,13 +6,13 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 20
-#define SECONDARY_THREAD_NUM 20
+#define THREAD_NUM 1
+#define SECONDARY_THREAD_NUM 30
 
-#define A_SIZE 10
-#define B_SIZE 15
+#define A_SIZE 1000
+#define B_SIZE 1500
 
-#define DOUBLE
+//#define DOUBLE
 
 // Forward declaration
 void *fn1(void *);
@@ -33,7 +33,6 @@ void *fn2(void *arg) {
     b->b[i] = b->b[i] + 1;
   }
   b->c = b->c + 1;
-  ColorLog("c2 = " << b->c);
 
   return nullptr;
 }
@@ -47,7 +46,6 @@ void *fn1(void *arg) {
     b->b[i] = b->b[i] + 1;
   }
   b->c = b->c + 1;
-  ColorLog("c1 = " << b->c);
 
 #if defined(DOUBLE)
   gthread_t threads[SECONDARY_THREAD_NUM];
@@ -107,7 +105,6 @@ int main() {
   }
 
   verify(b);
-  // printf("hahahahahaha\n");
   std::cout << "c = " << b->c << std::endl;
   std::cout << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
   // print_blob(b);
