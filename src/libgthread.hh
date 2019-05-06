@@ -50,9 +50,4 @@ extern "C" int __libc_start_main(main_fn_t main_fn, int argc, char** argv,
   return result;
 }
 
-__attribute__((destructor)) void fini() {
-  // ColorLog("END");
-  Gstm::Finalize();
-}
-
 #endif  // LIBGTHREAD_HH_

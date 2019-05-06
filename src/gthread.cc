@@ -52,15 +52,6 @@ void GThread::Create(gthread_t *t, void *(*start_routine)(void *), void *args) {
   }
 }
 
-void GThread::print_map(int i) {
-  // std::cerr << "No. " << i << std::endl;
-  // std::cerr << "---------------------START--------------------" << std::endl;
-  // for (const auto &p : *Gstm::local_page_version) {
-  // std::cerr << p.first << ": " << p.second << std::endl;
-  //}
-  // std::cerr << "---------------------END--------------------" << std::endl;
-}
-
 void GThread::AtomicBegin() {
   ColorLog("<a.beg>");
 
@@ -70,37 +61,27 @@ void GThread::AtomicBegin() {
   // Clear the local version mappings
   Gstm::read_set_version->clear();
   Gstm::write_set_version->clear();
-
-  print_map(0);
   Gstm::local_page_version->clear();
 
-  // std::cerr << "---------------------START--------------------" << std::endl;
+  // Copy over the version number for each page
   pthread_mutex_lock(Gstm::mutex);
   for (const auto &p : *Gstm::global_page_version) {
     Gstm::local_page_version->insert(p);
-    // std::cerr << getpid() << ": " << p.first << ": " << p.second <<
-    // std::endl;
   }
   pthread_mutex_unlock(Gstm::mutex);
-  // std::cerr << "---------------------END--------------------" << std::endl;
 
   // Turn off all permission on the local heap
   REQUIRE(mprotect(local_heap, HEAP_SIZE, PROT_NONE) == 0)
       << "mprotect failed: " << strerror(errno);
 
-  print_map(1);
-
   return;
 }
 
 void GThread::AtomicEnd() {
-  print_map(2);
   ColorLog("<a.end>");
   if (!AtomicCommit()) {
-    print_map(3);
     AtomicAbort();
   }
-  print_map(4);
 }
 
 bool GThread::AtomicCommit() {
@@ -136,6 +117,7 @@ bool GThread::AtomicCommit() {
 
 void GThread::AtomicAbort() {
   ColorLog("<ROLLLLLLLLLL BACK!>");
+
   // Throw away changes
   REQUIRE(madvise(local_heap, HEAP_SIZE, MADV_DONTNEED) == 0)
       << "madvise failed: " << strerror(errno);
@@ -144,8 +126,6 @@ void GThread::AtomicAbort() {
 
 void GThread::Join(gthread_t t) {
   AtomicEnd();
-  print_map(5);
   Gstm::WaitExited(t.tid);
-  print_map(6);
   AtomicBegin();
 }

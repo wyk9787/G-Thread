@@ -6,8 +6,8 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 50
-#define SECONDARY_THREAD_NUM 50
+#define THREAD_NUM 100
+#define SECONDARY_THREAD_NUM 100
 
 #define A_SIZE 1000
 #define B_SIZE 1500
@@ -107,5 +107,4 @@ int main() {
   verify(b);
   std::cout << "c = " << b->c << std::endl;
   std::cout << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
-  // print_blob(b);
 }

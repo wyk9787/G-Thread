@@ -1,7 +1,6 @@
 #ifndef STACKCONTEXT_
 #define STACKCONTEXT_
 
-//#include <setjmp.h>
 #include <stdlib.h>
 #include <ucontext.h>
 
@@ -11,7 +10,6 @@
 class StackContext {
  public:
   StackContext() = default;
-  ~StackContext() { DestroyContext(); }
 
   void InitStackContext();
 
@@ -25,9 +23,7 @@ class StackContext {
   void Phase2Save();
   void CompleteRestore(volatile void* padding);
   void GetStackBottom();
-  void DestroyContext();
 
-  // jmp_buf state_;
   ucontext_t state_;
   void* stack_;
 

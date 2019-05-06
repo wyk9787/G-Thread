@@ -40,10 +40,6 @@ void GlobalHeapInit() {
       mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   REQUIRE(global_heap != MAP_FAILED) << "mmap failed: " << strerror(errno);
 
-  LocalHeapInit();
-}
-
-void LocalHeapInit() {
   // Allocate memory for the global heap
   local_heap =
       mmap(NULL, HEAP_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, shm_fd, 0);
@@ -90,8 +86,6 @@ void* xxmalloc(size_t size) {
  * \param ptr   A pointer somewhere inside the object that is being freed
  */
 void xxfree(void* ptr) {
-  // TODO: Actually free things
-
   // Don't free NULL!
   if (ptr == NULL) return;
 }
@@ -101,7 +95,4 @@ void xxfree(void* ptr) {
  * \param ptr   A pointer somewhere inside the allocated object
  * \returns     The number of bytes available for use in this object
  */
-size_t xxmalloc_usable_size(void* ptr) {
-  // TODO: Use a bitmap to keep track of stuff
-  return 0;
-}
+size_t xxmalloc_usable_size(void* ptr) { return 0; }

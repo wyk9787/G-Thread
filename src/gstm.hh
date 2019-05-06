@@ -23,7 +23,6 @@ class Gstm {
                          PrivateAllocator<std::pair<void*, size_t>>>;
 
   static void Initialize();
-  static void Finalize();
   static void WaitExited(pid_t predecessor);
   static bool IsHeapConsistent();
   static void CommitHeap();
@@ -49,9 +48,6 @@ class Gstm {
   static private_mapping_t* local_page_version;
   static share_mapping_t*
       global_page_version;  // A global process-shared page version mapping
-
-  static void* global_page_version_buffer;
-  static void* rollback_count_buffer;
 };
 
 #endif  // GSTM_HH_
