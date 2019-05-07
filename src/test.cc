@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <iostream>
 
@@ -6,13 +6,13 @@
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 10
-#define SECONDARY_THREAD_NUM 10
+#define THREAD_NUM 20
+#define SECONDARY_THREAD_NUM 30
 
-#define A_SIZE 1000
-#define B_SIZE 1500
+#define A_SIZE 100
+#define B_SIZE 150
 
-#define DOUBLE
+//#define DOUBLE
 
 // Forward declaration
 void *fn1(void *);
@@ -46,23 +46,14 @@ void *fn1(void *arg) {
     b->b[i] = b->b[i] + 1;
   }
   b->c = b->c + 1;
-  int *a = (int *)malloc(sizeof(int) * 10);
-  for (int i = 0; i < 10; i++) {
-    a[i] = i;
-  }
-  printf("a = ");
-  for (int i = 0; i < 10; i++) {
-    printf(" %d", a[i]);
-  }
-  printf("\n");
 
 #if defined(DOUBLE)
-  gthread_t threads[SECONDARY_THREAD_NUM];
+  pthread_t threads[SECONDARY_THREAD_NUM];
   for (int i = 0; i < SECONDARY_THREAD_NUM; i++) {
-    GThread::Create(&threads[i], fn2, b);
+    pthread_create(&threads[i], NULL, fn2, b);
   }
   for (int i = 0; i < SECONDARY_THREAD_NUM; i++) {
-    GThread::Join(threads[i]);
+    pthread_join(threads[i], NULL);
   }
 #endif
 
@@ -102,15 +93,15 @@ void print_blob(blob_t *b) {
 }
 
 int main() {
-  gthread_t threads[THREAD_NUM];
+  pthread_t threads[THREAD_NUM];
   blob_t *b = (blob_t *)malloc(sizeof(blob_t));
   memset(b, 0, sizeof(blob_t));
 
   for (int i = 0; i < THREAD_NUM; i++) {
-    GThread::Create(&threads[i], fn1, b);
+    pthread_create(&threads[i], NULL, fn1, b);
   }
   for (int i = 0; i < THREAD_NUM; i++) {
-    GThread::Join(threads[i]);
+    pthread_join(threads[i], NULL);
   }
 
   verify(b);

@@ -10,8 +10,6 @@
 #include "log.h"
 #include "util.hh"
 
-// Define them as global and back them with a shared mapping so that multiple
-// processes can access the same head_ and used_
 static void* head_;
 static size_t used_;
 

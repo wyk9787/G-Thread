@@ -11,12 +11,11 @@ class StackContext {
  public:
   StackContext() = default;
 
+  // Initialize the context
   void InitStackContext();
 
   void SaveContext();
   void RestoreContext();
-
-  size_t stack_size_;
 
  private:
   void CompleteSave(void* top_of_stack);
@@ -26,8 +25,8 @@ class StackContext {
 
   ucontext_t state_;
   void* stack_;
+  size_t stack_size_;
 
-  static bool initialized_;
   static void* bottom_of_stack_;
 };
 

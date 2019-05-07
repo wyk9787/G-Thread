@@ -13,6 +13,7 @@
 // Round a value x down to the next multiple of y
 #define ROUND_DOWN(x, y) ((x) % (y) == 0 ? (x) : (x) - ((x) % (y)))
 
+// Constants
 #define MAX_STACK_SIZE (PAGE_SIZE * 20)
 #define HEAP_SIZE 512 * 1024
 #define SUBHEAP_SIZE (HEAP_SIZE / NUM_SUBHEAP)
@@ -27,6 +28,7 @@ extern int shm_fd;         // File descriptor for shared memory object
 extern void* local_heap;   // Local view of the state
 extern void* global_heap;  // Latest committed state of the global_heap
 
+// Initialize the global heap
 void GlobalHeapInit();
 
 #endif  // UTIL_HH_

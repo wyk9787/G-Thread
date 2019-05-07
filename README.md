@@ -13,14 +13,11 @@ free of all of those concurrency bugs and work correctly.
 
 ## Usage
 
-To adapt your program to use G-Thread is straight forward. 
+To adapt your pthread program to use G-Thread is simple:
 
 1. Include the library `#include "libgthread.hh"`
 
-2. Use `GThread::Create()` and `GThread::Join()` instead of `pthread_create()`
-   and `pthread_join()`
-
-3. Link your program against the GThread library
+2. Link your program against the G-Thread library
 
 [test.cc](src/test.cc) is an example program that illustrates the elimination of
 race condition using G-Thread. To run this test:
@@ -30,7 +27,7 @@ make clean all
 ./src/gtest
 ```
 
-To print out the logging information while G-Thread is running, uncomment this [line](https://github.com/wyk9787/G-STM/blob/540907da27075547b1303332e2a1e33cd84b39d4/src/util.hh#L24)
+To print out the logging information while G-Thread is running, uncomment this [line](https://github.com/wyk9787/G-STM/blob/540907da27075547b1303332e2a1e33cd84b39d4/src/util.hh#L25)
 to define `LOGPRINT` macro and recompile the program.
 
 ## Limitations

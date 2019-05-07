@@ -1,6 +1,7 @@
 #ifndef GTHREAD_HH_
 #define GTHREAD_HH_
 
+#include <pthread.h>
 #include <setjmp.h>
 #include <unistd.h>
 #include <unordered_set>
@@ -18,9 +19,10 @@ class GThread {
  public:
   GThread() = delete;
 
-  // Possibly change to use Functional interface in the future
+  // Create a thread
   static void Create(gthread_t *t, void *(*start_routine)(void *), void *args);
 
+  // Join a thread
   static void Join(gthread_t t);
 
   // Begins an atomic section
@@ -29,8 +31,8 @@ class GThread {
   // Ends an atomic section
   static void AtomicEnd();
 
+  // Initialize GThread
   static void InitGThread();
-  static void print_map(int i);
 
  private:
   // Abort and rollbakc an atomic section
@@ -39,10 +41,11 @@ class GThread {
   // Commit an atomic section
   static bool AtomicCommit();
 
+  // Initialize stack context
   static void InitStackContext();
 
-  static pid_t tid_;
-  static pid_t predecessor_;     // its child pid
+  static pid_t tid_;             // tid of current processor
+  static pid_t predecessor_;     // predecessor's process id
   static StackContext context_;  // stack context
 };
 

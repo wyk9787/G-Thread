@@ -153,14 +153,25 @@ void Gstm::WaitExited(pid_t predecessor) {
     return;
   }
   int status;
+  ColorLog("<wait>\t\tpid:" << predecessor);
   int ret = waitpid(predecessor, &status, 0);
-
   // It is possible this process has already used join to collect its immediate
   // child
-  if (ret != predecessor && errno != ECHILD) {
-    ColorLog("Wait for processor " << predecessor
-                                   << " failed: " << strerror(errno));
+  if (ret != predecessor) {
+    if (errno == ECHILD) {
+      while (kill(predecessor, 0) != -1)
+        ;
+      if (errno == ESRCH) {
+        ColorLog("<wait.S>\t\tpid:" << predecessor);
+        return;
+      }
+    } else {
+      ColorLog("Wait for processor " << predecessor
+                                     << " failed: " << strerror(errno));
+      _exit(0);
+    }
   }
+  ColorLog("<wait.S>\t\tpid:" << predecessor);
 }
 
 bool Gstm::IsHeapConsistent() {

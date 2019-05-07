@@ -39,7 +39,7 @@ void GThread::Create(gthread_t *t, void *(*start_routine)(void *), void *args) {
   } else {
     // Child process
     tid_ = getpid();
-    predecessor_ = 0;
+    // predecessor_ = 0;
 
     AtomicBegin();
     // Execute thread function

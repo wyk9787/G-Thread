@@ -18,7 +18,6 @@ static volatile bool first_time;
 
 // Initialize static class members
 void* StackContext::bottom_of_stack_ = nullptr;
-bool StackContext::initialized_ = false;
 
 void StackContext::GetStackBottom() {
   // Here we figure out the bottom of the stack, which should be completely
@@ -110,8 +109,6 @@ void StackContext::CompleteRestore(volatile void* padding) {
 }
 
 void StackContext::RestoreContext() {
-  ColorLog("stack_size: " << stack_size_);
-  ColorLog("Restor Context");
   volatile void* padding = nullptr;
   // When we finally do a longjmp, we're going to rewind the stack pointer to
   // where it was previously. However, before we do that, we need to restore the
