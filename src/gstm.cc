@@ -159,6 +159,8 @@ void Gstm::WaitExited(pid_t predecessor) {
   // child
   if (ret != predecessor) {
     if (errno == ECHILD) {
+      // Keep checking if the predecessor has exited in the case that
+      // predecessor is not a child of current process
       while (kill(predecessor, 0) != -1)
         ;
       if (errno == ESRCH) {

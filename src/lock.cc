@@ -1,16 +1,16 @@
-#include <pthread.h>
+#include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <iostream>
 
-#include "color_log.hh"
 #include "libgthread.hh"
 #include "log.h"
 
-#define THREAD_NUM 20
-#define SECONDARY_THREAD_NUM 30
+#define THREAD_NUM 100
+#define SECONDARY_THREAD_NUM 50
 
-#define A_SIZE 100
-#define B_SIZE 150
+#define A_SIZE 1000
+#define B_SIZE 1500
 
 //#define DOUBLE
 
@@ -104,7 +104,6 @@ int main() {
     pthread_join(threads[i], NULL);
   }
 
-  verify(b);
+  // verify(b);
   std::cout << "c = " << b->c << std::endl;
-  std::cout << "Rollback count = " << *Gstm::rollback_count_ << std::endl;
 }

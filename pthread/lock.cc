@@ -5,13 +5,13 @@
 
 #include "../src/log.h"
 
-#define THREAD_NUM 50
+#define THREAD_NUM 1000
 #define SECONDARY_THREAD_NUM 50
 
 #define A_SIZE 1000
 #define B_SIZE 1500
 
-#define DOUBLE
+//#define DOUBLE
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
