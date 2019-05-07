@@ -53,5 +53,5 @@ other thread.
 
 G-Thread is able to sacrifice some performance to guarantee sequential semantics
 of the program. You can comment out this [line](https://github.com/wyk9787/G-Thread/blob/f98cf68f28cbb66e7640216508d71dbb02e96cd2/src/util.hh#L27)
-to not define "NOORDER" and recompile the program to let the program be free of
+to not define "NO_ORDER" macro and recompile the program to let the program be free of
 order violation.
