@@ -49,7 +49,7 @@ other thread.
 
 4. Return value from the thread isn't supported yet.
 
-# Order violation
+## Order violation
 
 G-Thread is able to sacrifice some performance to guarantee sequential semantics
 of the program. You can comment out this [line](https://github.com/wyk9787/G-Thread/blob/f98cf68f28cbb66e7640216508d71dbb02e96cd2/src/util.hh#L27)
