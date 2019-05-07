@@ -17,7 +17,8 @@ To adapt your pthread program to use G-Thread is simple:
 2. Link your program against the G-Thread library
 
 [test.cc](src/test.cc) is an example program that illustrates the elimination of
-race condition using G-Thread. To run this test:
+race condition using G-Thread. Other examples can be found in
+[example](example/) folder. To run this test:
 
 ```
 make clean all
@@ -48,6 +49,9 @@ other thread.
 
 4. Return value from the thread isn't supported yet.
 
+# Order violation
 
-
-
+G-Thread is able to sacrifice some performance to guarantee sequential semantics
+of the program. You can comment out this [line](https://github.com/wyk9787/G-STM/blob/540907da27075547b1303332e2a1e33cd84b39d4/src/util.hh#L27)
+to not define "NOORDER" and recompile the program to let the program be free of
+order violation.
