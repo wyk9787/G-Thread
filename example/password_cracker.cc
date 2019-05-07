@@ -29,16 +29,16 @@ typedef struct password_entry {
   char username[MAX_USERNAME_LENGTH + 1];
   uint8_t password_md5[MD5_DIGEST_LENGTH + 1];
   bool cracked;
-  struct password_entry *next;
 } password_entry_t;
 
 void crack_passwords(char *plaintext);
 void generate_all_possibilities(size_t number);
 int md5_string_to_bytes(const char *md5_string, uint8_t *bytes);
-password_entry_t *read_password_file(const char *filename);
+void read_password_file(const char *filename);
 void print_md5_bytes(const uint8_t *bytes);
 
-password_entry_t *passwords;
+password_entry_t passwords[10];
+size_t size = 0;
 
 // pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
@@ -68,14 +68,8 @@ int main(int argc, char **argv) {
   }
 
   // Read in the password file
-  passwords = read_password_file(argv[1]);
+  read_password_file(argv[1]);
 
-  // Initilization
-  password_entry_t *current = passwords;
-  while (current != NULL) {
-    current->cracked = false;
-    current = current->next;
-  }
   // You'll have to move over any code from partB that you would like to use.
   // Here's a quick little thread demo.
   pthread_t threads[NUM_THREAD];
@@ -102,14 +96,6 @@ int main(int argc, char **argv) {
       exit(2);
     }
   }
-
-  // // Show the results
-  // printf("Thread 1 returned %d\n", thread1_result->result);
-  // printf("Thread 2 retunred %d\n", thread2_result->result);
-  //
-  // // Free the result structs, which were originally allocated in our threads
-  // free(thread1_result);
-  // free(thread2_result);
 }
 
 void generate_all_possibilities(size_t number) {
@@ -134,22 +120,21 @@ void crack_passwords(char *plaintext) {
   MD5((unsigned char *)plaintext, strlen(plaintext), password_hash);
 
   // Check if the two hashes are equal
-  password_entry_t *current = passwords;
+  password_entry_t current;
   bool all_true = true;
-  while (current != NULL) {
-    if (!current->cracked) {  // Has not been cracked yet
-      if (memcmp(current->password_md5, password_hash, MD5_DIGEST_LENGTH) ==
-          0) {
-        printf("%s ", current->username);
+  for (int i = 0; i < size; i++) {
+    current = passwords[i];
+    if (!current.cracked) {  // Has not been cracked yet
+      if (memcmp(current.password_md5, password_hash, MD5_DIGEST_LENGTH) == 0) {
+        printf("%s ", current.username);
         printf("%s\n", plaintext);
         // pthread_mutex_lock(&m);
-        current->cracked = true;
+        passwords[i].cracked = true;
         // pthread_mutex_unlock(&m);
       } else {
         all_true = false;
       }
     }
-    current = current->next;
   }
   if (all_true) {
     printf("Rollback count= %zu\n", *Gstm::rollback_count_);
@@ -163,7 +148,7 @@ void crack_passwords(char *plaintext) {
  * \param filename  The path to the password file
  * \returns         A pointer to the first node in the password list
  */
-password_entry_t *read_password_file(const char *filename) {
+void read_password_file(const char *filename) {
   // Open the password file
   FILE *password_file = fopen(filename, "r");
   if (password_file == NULL) {
@@ -171,37 +156,29 @@ password_entry_t *read_password_file(const char *filename) {
     exit(2);
   }
 
-  // Keep track of the current list
-  password_entry_t *list = NULL;
-
   // Read until we hit the end of the file
   while (!feof(password_file)) {
     // Make space for a new node
-    password_entry_t *newnode =
-        (password_entry_t *)malloc(sizeof(password_entry_t));
-
     // Make space to hold the MD5 string
     char md5_string[MD5_DIGEST_LENGTH * 2 + 1];
 
     // Try to read. The space in the format string is required to eat the
     // newline
-    if (fscanf(password_file, "%s %s ", newnode->username, md5_string) != 2) {
+    if (fscanf(password_file, "%s %s ", passwords[size].username, md5_string) !=
+        2) {
       fprintf(stderr, "Error reading password file: malformed line\n");
       exit(2);
     }
 
     // Convert the MD5 string to MD5 bytes in our new node
-    if (md5_string_to_bytes(md5_string, newnode->password_md5) != 0) {
+    if (md5_string_to_bytes(md5_string, passwords[size].password_md5) != 0) {
       fprintf(stderr, "Error reading MD5\n");
       exit(2);
     }
+    passwords[size].cracked = false;
 
-    // Add the new node to the front of the list
-    newnode->next = list;
-    list = newnode;
+    size++;
   }
-
-  return list;
 }
 
 /**
