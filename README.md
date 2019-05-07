@@ -1,15 +1,12 @@
 # G-Thread
 
-G-Thread is a lock-free but safe multithreaded programming interface for C++
-based on optimistic concurrency control, or more specifically, software transactional memory(STM). 
-G-Thread reimplements a subset of the system called [Grace]
+G-Thread is a lock-free software-only runtime system for C++ that eliminates concurrency
+errors for fork-join parallel programs. G-Thread reimplements a subset of the system called [Grace]
 (https://dl.acm.org/citation.cfm?doid=1640089.1640096). 
 
-G-Thread provides an interface close to `pthread` and avoids common currency
-bugs entirely such as race condition, atomicity violation, deadlock, etc. By
-changing all your `pthread_create` and `pthread_join` into `GThread::Create` and
-`GThread::Join` and getting rid of all the locks, your program will be simply
-free of all of those concurrency bugs and work correctly.
+By including the header file and linking against the G-Thread library, your
+pthread programs are easily free of concurrency errors such as atomicity
+violation, order violation, race conditions, etc.
 
 ## Usage
 
@@ -34,6 +31,10 @@ to define `LOGPRINT` macro and recompile the program.
 
 Those are some of the limitations that G-Thread currently has:
 
+0. G-Thread only supports fork-join parallelism and does not support programs
+   with concurrency control through synchronization primitives such as condition
+variables.
+
 1. Although stack and heap memory will work without any concurrency issues, the
    global variable still need to be protected by locks or other synchronization control
 to avoid concurrency bugs.
@@ -44,6 +45,8 @@ other thread.
 
 3. No memory used by user's program or G-Thread will ever be reclaimed by OS even if
    user explicitly called `free`.
+
+4. Return value from the thread isn't supported yet.
 
 
 
