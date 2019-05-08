@@ -30,7 +30,7 @@ make clean all
 ./src/gtest
 ```
 
-To print out the logging information while G-Thread is running, uncomment this [line](https://github.com/wyk9787/G-STM/blob/540907da27075547b1303332e2a1e33cd84b39d4/src/util.hh#L25)
+To print out the logging information while G-Thread is running, uncomment this [line]https://github.com/wyk9787/G-Thread/blob/1c0a5d268863f6c7460e365e04759d30e329250b/src/util.hh#L25)
 to define `LOGPRINT` macro and recompile the program.
 
 ## Limitations
