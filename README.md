@@ -1,8 +1,7 @@
 # G-Thread
 
 G-Thread is a lock-free software-only runtime system for C++ that eliminates concurrency
-errors for fork-join parallel programs. G-Thread reimplements a subset of the system called [Grace]
-(https://dl.acm.org/citation.cfm?doid=1640089.1640096). 
+errors for fork-join parallel programs. G-Thread reimplements a subset of the system called [Grace](https://dl.acm.org/citation.cfm?doid=1640089.1640096). 
 
 By including the header file and linking against the G-Thread library, your
 pthread programs are easily free of concurrency errors such as atomicity
