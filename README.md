@@ -14,13 +14,19 @@ To adapt your pthread program to use G-Thread is simple:
 
 1. Include the library `#include "libgthread.hh"`
 
-2. Link your program against the G-Thread library
+2. Copy over your program into [src/](src/) directory and run `make`
 
-[test.cc](src/test.cc) is an example program that illustrates the elimination of
+3. Inside `src/` directory, run `./gtest`
+
+[test.cc](example/test.cc) is an example program that illustrates the elimination of
 race condition using G-Thread. Other examples can be found in
-[example](example/) folder. To run this test:
+[example](example/) folder or you can easily adapt problematic programs in [pthread](pthread/) folder to use gthread by including `libgthread.hh`.
+
+To run this test:
 
 ```
+cd src/
+cp ../example/test.cc ./
 make clean all
 ./src/gtest
 ```
@@ -48,6 +54,8 @@ other thread.
    user explicitly called `free`.
 
 4. Return value from the thread isn't supported yet.
+
+5. Only heap-allocated memory can be passed into threads without concurrency issues. Stack-allocated variables passed into threads are not supported at this moment.
 
 ## Order violation
 
