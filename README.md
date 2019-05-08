@@ -59,6 +59,6 @@ other thread.
 ## Order violation
 
 G-Thread is able to sacrifice some performance to guarantee sequential semantics
-of the program. You can comment out this [line](https://github.com/wyk9787/G-Thread/blob/f98cf68f28cbb66e7640216508d71dbb02e96cd2/src/util.hh#L27)
+of the program. You can comment out this [line](https://github.com/wyk9787/G-Thread/blob/629018228a7b1f51f9f0c637a86f2b52da89cf64/src/util.hh#L27)
 to not define `NO_ORDER` macro and recompile the program to let the program be free of
 order violation. See [order_violation.cc](pthread/order_violation.cc) for illustration of order violation.
