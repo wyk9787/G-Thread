@@ -13,13 +13,13 @@ To adapt your pthread program to use G-Thread is simple:
 
 1. Include the library `#include "libgthread.hh"`
 
-2. Copy over your program into [src/](src/) directory and run `make`
+2. Copy over your program into [src](src/) directory and run `make`
 
-3. Inside `src/` directory, run `./gtest`
+3. Inside `src` directory, run `./gtest`
 
 [test.cc](example/test.cc) is an example program that illustrates the elimination of
 race condition using G-Thread. Other examples can be found in
-[example](example/) folder or you can easily adapt problematic programs in [pthread](pthread/) folder to use gthread by including `libgthread.hh`.
+[example](example/) directory or you can easily adapt problematic programs in [pthread](pthread/) directory to use gthread by including `libgthread.hh`.
 
 To run this test:
 
