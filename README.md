@@ -7,6 +7,8 @@ By including the header file and linking against the G-Thread library, your
 pthread programs are easily free of concurrency errors such as atomicity
 violation, order violation, race conditions, etc.
 
+Proposal and final report of this project can be found in [misc](misc/) directory.
+
 ## Usage
 
 To adapt your pthread program to use G-Thread is simple:
@@ -30,7 +32,7 @@ make clean all
 ./src/gtest
 ```
 
-To print out the logging information while G-Thread is running, uncomment this [line]https://github.com/wyk9787/G-Thread/blob/1c0a5d268863f6c7460e365e04759d30e329250b/src/util.hh#L25)
+To print out the logging information while G-Thread is running, uncomment this [line](https://github.com/wyk9787/G-Thread/blob/1c0a5d268863f6c7460e365e04759d30e329250b/src/util.hh#L25)
 to define `LOGPRINT` macro and recompile the program.
 
 ## Limitations
