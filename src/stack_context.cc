@@ -66,7 +66,7 @@ NO_INLINE void StackContext::CompleteSave(void* top_of_stack) {
   }
   // REQUIRE(stack_ != MAP_FAILED) << "mmap failed: " << strerror(errno);
 
-  memset(stack_, ROUND_UP(stack_size_, PAGE_SIZE), 0);
+  memset(stack_, 0, ROUND_UP(stack_size_, PAGE_SIZE));
   memcpy(stack_, top_of_stack, stack_size_);
 }
 
